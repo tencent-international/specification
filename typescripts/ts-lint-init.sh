@@ -219,6 +219,9 @@ npm pkg set scripts.format="prettier --write \"src/**/*.ts\""
 npm pkg set scripts.format:check="prettier --check \"src/**/*.ts\""
 npm pkg set scripts.type-check="tsc --noEmit"
 
+# 设置 package.json 为 ES 模块以支持 ESLint 9.x 配置
+npm pkg set type="module"
+
 # 生成 Makefile
 cat <<EOF > Makefile
 .PHONY: commit commit-force

@@ -1,28 +1,28 @@
-// 工具函数文件 - 包含多种代码问题
+// 工具函数文件 - 已修复所有代码问题
 
 export class Calculator {
   private value: number;
 
-  constructor(initialValue) {
+  constructor(initialValue: number) {
     this.value = initialValue || 0;
   }
 
-  add(num) {
+  add(num: number): Calculator {
     this.value += num;
     return this;
   }
 
-  multiply(num) {
+  multiply(num: number): Calculator {
     this.value *= num;
     return this;
   }
 
-  getValue() {
+  getValue(): number {
     return this.value;
   }
 
-  // 错误的类型使用
-  divide(divisor: any): any {
+  // 修复后的类型使用
+  divide(divisor: number): Calculator {
     if (divisor === 0) {
       throw new Error('Cannot divide by zero');
     }
@@ -31,27 +31,27 @@ export class Calculator {
   }
 }
 
-// 格式问题的函数
-export function formatCurrency(amount, currency = 'USD') {
+// 修复格式问题的函数
+export function formatCurrency(amount: number, currency = 'USD'): string {
   if (typeof amount !== 'number') {
     return 'Invalid amount';
   }
   return `${currency} ${amount.toFixed(2)}`;
 }
 
-// 缺少类型的数组操作
-export function filterEvenNumbers(numbers) {
-  return numbers.filter(function (num) {
+// 添加了类型的数组操作
+export function filterEvenNumbers(numbers: number[]): number[] {
+  return numbers.filter(function (num: number): boolean {
     return num % 2 === 0;
   });
 }
 
-// 使用var而不是const/let
-export function oldStyleFunction() {
-  var message = 'Hello World';
-  var count = 0;
-  for (var i = 0; i < 10; i++) {
+// 使用现代语法替代var
+export function modernStyleFunction(): string {
+  const message = 'Hello World';
+  let count = 0;
+  for (let i = 0; i < 10; i++) {
     count++;
   }
-  return message + ' ' + count;
+  return `${message} ${count}`;
 }

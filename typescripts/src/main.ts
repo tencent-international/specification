@@ -1,10 +1,10 @@
-import { createUser, processUsers, User } from './index';
+import { createUser, processUsers } from './index';
 import { Calculator, formatCurrency } from './utils';
 import { Product, UserRole, Status } from './types';
 
 // 测试用户功能
 const user1 = createUser(1, 'Alice', 'alice@example.com');
-const user2 = createUser(2, 'Bob');
+const user2 = createUser(2, 'Bob'); // email is optional
 
 const users = [user1, user2];
 const activeUsers = processUsers(users);

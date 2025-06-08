@@ -10,12 +10,18 @@ export interface Product {
   tags?: string[];
 }
 
-// 有问题的类型定义
+// 修复后的类型定义
+export interface CustomerInfo {
+  name: string;
+  email: string;
+  phone?: string;
+}
+
 export interface Order {
-  id; // 缺少类型
+  id: number; // 添加了类型
   products: Product[];
   total: number;
-  customerInfo: any; // 应该避免使用any
+  customerInfo: CustomerInfo; // 使用具体类型替代any
   createdAt: Date;
 }
 

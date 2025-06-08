@@ -1,4 +1,4 @@
-// 这是一个测试文件，包含各种代码问题用于测试lint和format功能
+// 这是一个测试文件，现在已修复所有代码质量问题
 
 export interface User {
   id: number;
@@ -7,37 +7,38 @@ export interface User {
   isActive: boolean;
 }
 
-export function createUser(id, name, email) {
-  var user = {
+export function createUser(id: number, name: string, email?: string): User {
+  const user: User = {
     id: id,
     name: name,
-    email: email || null,
     isActive: true,
   };
+
+  if (email) {
+    user.email = email;
+  }
+
   return user;
 }
 
-export function processUsers(users: any[]) {
-  let result = [];
+export function processUsers(users: User[]): string[] {
+  const result: string[] = [];
   for (let i = 0; i < users.length; i++) {
-    let user = users[i];
-    if (user.isActive == true) {
+    const user = users[i];
+    if (user && user.isActive === true) {
       result.push(user.name.toUpperCase());
     }
   }
   return result;
 }
 
-// 未使用的变量
-const unusedVariable = 'this will trigger eslint error';
-
-// 没有返回类型声明的函数
-export function calculateAge(birthYear) {
+// 有返回类型声明的函数
+export function calculateAge(birthYear: number): number {
   const currentYear = new Date().getFullYear();
   return currentYear - birthYear;
 }
 
-// 使用any类型
-export function handleData(data: any): any {
+// 使用更具体的类型替代any
+export function handleData(data: { someProperty: unknown }): unknown {
   return data.someProperty;
 }
