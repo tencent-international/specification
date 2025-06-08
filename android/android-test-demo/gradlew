@@ -1,0 +1,39 @@
+#!/bin/bash
+# 模拟的 gradlew 脚本用于测试 android-lint-init.sh
+
+echo "🤖 模拟 gradlew 命令执行: $*"
+
+case "$1" in
+    "lint")
+        echo "📋 运行 Android Lint 检查..."
+        echo "警告: 发现以下问题:"
+        echo "- HardcodedText: 在 activity_main.xml 中发现硬编码文本"
+        echo "- UnusedResources: strings.xml 中有未使用的字符串资源"
+        echo "- UselessParent: activity_main.xml 中有无用的父级容器"
+        echo "- ObsoleteLayoutParam: 使用了过时的 fill_parent"
+        echo "✅ Lint 检查完成，查看报告: build/reports/lint/lint-results.html"
+        ;;
+    "ktlintCheck")
+        echo "🔍 运行 Ktlint 检查..."
+        echo "发现代码风格问题:"
+        echo "MainActivity.kt:18: 等号周围缺少空格"
+        echo "MainActivity.kt:19: 等号周围缺少空格" 
+        echo "DataManager.kt:23: 等号周围缺少空格"
+        echo "DataManager.kt:12: 变量命名应使用驼峰格式"
+        exit 1
+        ;;
+    "ktlintFormat")
+        echo "✨ 运行 Ktlint 格式化..."
+        echo "已格式化以下文件:"
+        echo "- app/src/main/java/com/example/androidtestdemo/MainActivity.kt"
+        echo "- app/src/main/java/com/example/androidtestdemo/DataManager.kt"
+        echo "✅ 代码格式化完成"
+        ;;
+    "ktlintApplyToIdea")
+        echo "🔧 配置 Android Studio Ktlint 规则..."
+        echo "✅ IDE 配置完成"
+        ;;
+    *)
+        echo "✅ Gradle 任务 '$*' 执行完成"
+        ;;
+esac 

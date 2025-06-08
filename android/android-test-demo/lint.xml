@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- 错误级别规则 -->
+    <issue id="HardcodedText" severity="error" />
+    <issue id="MissingTranslation" severity="error" />
+    <issue id="UnusedResources" severity="error" />
+    <issue id="IconMissingDensityFolder" severity="error" />
+    <issue id="SecurityLogCatch" severity="error" />
+    <issue id="LogConditional" severity="error" />
+    
+    <!-- 警告级别规则 -->
+    <issue id="UselessParent" severity="warning" />
+    <issue id="InefficientWeight" severity="warning" />
+    <issue id="NestedWeights" severity="warning" />
+    <issue id="DisableBaselineAlignment" severity="warning" />
+    <issue id="ObsoleteLayoutParam" severity="warning" />
+    <issue id="Overdraw" severity="warning" />
+    
+    <!-- 性能相关 -->
+    <issue id="DrawAllocation" severity="warning" />
+    <issue id="Recycle" severity="error" />
+    <issue id="WakelockTimeout" severity="warning" />
+    
+    <!-- 安全相关 -->
+    <issue id="AllowBackup" severity="warning" />
+    <issue id="ExportedActivity" severity="warning" />
+    <issue id="ExportedReceiver" severity="warning" />
+    <issue id="ExportedService" severity="warning" />
+    
+    <!-- 忽略的规则 -->
+    <issue id="GoogleAppIndexingWarning" severity="ignore" />
+    <issue id="LintBaseline" severity="ignore" />
+    
+    <!-- Kotlin 相关 -->
+    <issue id="UnsafeCall" severity="error" />
+    <issue id="NullSafeMutableLiveData" severity="warning" />
+</lint>
