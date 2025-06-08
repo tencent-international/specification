@@ -12,7 +12,7 @@
 ## 二、快速开始
 
 ### 1. 初始化项目
-
+#### 把 go-init-commit-assist.sh 复制到项目的根目录下
 ```bash
 bash go-init-commit-assist.sh
 ```
@@ -20,7 +20,6 @@ bash go-init-commit-assist.sh
 ### 提交命令
 ```shell
 make commit
-
 ```
 
 ### 中英切换
