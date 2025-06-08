@@ -351,16 +351,25 @@ if [ -n "$(git diff --name-only)" ] || [ -n "$(git diff --cached --name-only)" ]
 fi
 
 echo ""
-echo "✨ Step 1: 运行 Ktlint 格式化..."
+echo "✨ Step 1: Ktlint 格式化"
 if [ -f "gradlew" ]; then
-  if ./gradlew ktlintFormat > /dev/null 2>&1; then
-    echo "✅ Ktlint 格式化完成"
-    if [ -n "$(git diff --name-only)" ]; then
-      echo "📦 格式化后检测到文件变更，自动暂存"
-      git add .
+  # 询问是否需要格式化
+  read -p "🤔 是否运行 Ktlint 自动格式化？(Y/n): " FORMAT_CONFIRM
+  FORMAT_CONFIRM=${FORMAT_CONFIRM:-y}
+  
+  if [[ "$FORMAT_CONFIRM" =~ ^[Yy]$ ]]; then
+    echo "🔧 正在运行 Ktlint 格式化..."
+    if ./gradlew ktlintFormat > /dev/null 2>&1; then
+      echo "✅ Ktlint 格式化完成"
+      if [ -n "$(git diff --name-only)" ]; then
+        echo "📦 格式化后检测到文件变更，自动暂存"
+        git add .
+      fi
+    else
+      echo "⚠️ Ktlint 格式化失败，可能项目未配置 Ktlint"
     fi
   else
-    echo "⚠️ Ktlint 格式化失败，可能项目未配置 Ktlint"
+    echo "⏩ 跳过 Ktlint 格式化"
   fi
 else
   echo "⚠️ 未找到 gradlew，跳过 Ktlint 格式化"
@@ -412,7 +421,8 @@ else
 fi
 
 echo ""
-echo "🤖 Step 4: 调用 GPTCommit 生成提交信息并提交..."
+echo "🤖 Step 4: 生成提交信息并提交..."
+echo "📝 正在调用 GPTCommit 生成提交信息..."
 git commit --quiet --no-edit
 echo ""
 echo "🎉 提交完成！"
@@ -483,6 +493,6 @@ echo "📖 常用命令："
 echo "   • make lint         - 运行 Android Lint 检查"
 echo "   • make ktlint       - 运行 Ktlint 检查"
 echo "   • make format       - 自动格式化 Kotlin 代码"
-echo "   • make commit       - 智能提交（有错误时会询问）"
+echo "   • make commit       - 智能提交（格式化需询问，检查错误时会询问）"
 echo "   • make commit-force - 强制提交（忽略 lint 错误）"
 echo "" 

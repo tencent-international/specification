@@ -49,9 +49,14 @@ EOF
 
 # 生成 Makefile
 cat <<EOF > Makefile
-.PHONY: commit
+.PHONY: commit lint format
 commit:
 	bash scripts/smart-commit.sh auto=yes
+lint:
+	golangci-lint run --config .golangci.yml
+format:
+	gofmt -s -w .
+	goimports -w .
 EOF
 
 # 生成 Go 智能提交脚本
