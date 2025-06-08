@@ -12,9 +12,10 @@
 ## 二、快速开始
 
 ### 1. 初始化项目
-#### 把 go-init-commit-assist.sh 复制到项目的根目录下
+#### 把 go-conventional-commits-init.sh 复制到项目的根目录下
 ```bash
-bash go-init-commit-assist.sh
+bash gptcommit-init.sh
+bash go-lint-init.sh
 ```
 
 ### 提交命令
