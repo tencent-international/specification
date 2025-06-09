@@ -112,6 +112,12 @@ elif ! echo "$FIRST_LINE" | grep -Eq "$REGEX"; then
   echo "⧗ Invalid commit message format." >&2
   echo "   应符合: type: subject 或 type(scope): subject" >&2
   echo "   当前第一行: $FIRST_LINE" >&2
+  echo "" >&2
+  echo "📝 完整的提交信息内容:" >&2
+  echo "----------------------------------------" >&2
+  cat "$MSGFILE" >&2
+  echo "----------------------------------------" >&2
+  echo "" >&2
   echo "   示例: feat: add new endpoint" >&2
   echo "   详情规范请看: https://github.com/tencent-international/specification/blob/main/README.md" >&2
   exit 1
