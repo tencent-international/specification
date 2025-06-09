@@ -11,16 +11,120 @@ if [ ! -f "package.json" ]; then
 fi
 
 # 安装 TypeScript 开发依赖
-echo "🔧 安装 TypeScript 开发工具..."
-npm install --save-dev \
-  typescript \
-  @typescript-eslint/eslint-plugin \
-  @typescript-eslint/parser \
-  eslint \
-  prettier \
-  eslint-config-prettier \
-  eslint-plugin-prettier \
-  @types/node
+echo "🔧 检查并安装 TypeScript 开发工具..."
+
+# 检查依赖是否已安装的函数
+check_package_installed() {
+  local package_name="$1"
+  npm list "$package_name" >/dev/null 2>&1
+}
+
+# 需要安装的依赖列表
+REQUIRED_PACKAGES=()
+
+# 检查各个依赖包
+echo "🔍 检查现有依赖..."
+
+if ! check_package_installed "typescript"; then
+  echo "   ❌ typescript 未安装"
+  REQUIRED_PACKAGES+=("typescript")
+else
+  echo "   ✅ typescript 已安装"
+fi
+
+if ! check_package_installed "@typescript-eslint/eslint-plugin"; then
+  echo "   ❌ @typescript-eslint/eslint-plugin 未安装"
+  REQUIRED_PACKAGES+=("@typescript-eslint/eslint-plugin")
+else
+  echo "   ✅ @typescript-eslint/eslint-plugin 已安装"
+fi
+
+if ! check_package_installed "@typescript-eslint/parser"; then
+  echo "   ❌ @typescript-eslint/parser 未安装"
+  REQUIRED_PACKAGES+=("@typescript-eslint/parser")
+else
+  echo "   ✅ @typescript-eslint/parser 已安装"
+fi
+
+if ! check_package_installed "eslint"; then
+  echo "   ❌ eslint 未安装"
+  REQUIRED_PACKAGES+=("eslint")
+else
+  echo "   ✅ eslint 已安装"
+fi
+
+if ! check_package_installed "prettier"; then
+  echo "   ❌ prettier 未安装"
+  REQUIRED_PACKAGES+=("prettier")
+else
+  echo "   ✅ prettier 已安装"
+fi
+
+if ! check_package_installed "eslint-config-prettier"; then
+  echo "   ❌ eslint-config-prettier 未安装"
+  REQUIRED_PACKAGES+=("eslint-config-prettier")
+else
+  echo "   ✅ eslint-config-prettier 已安装"
+fi
+
+if ! check_package_installed "eslint-plugin-prettier"; then
+  echo "   ❌ eslint-plugin-prettier 未安装"
+  REQUIRED_PACKAGES+=("eslint-plugin-prettier")
+else
+  echo "   ✅ eslint-plugin-prettier 已安装"
+fi
+
+if ! check_package_installed "@types/node"; then
+  echo "   ❌ @types/node 未安装"
+  REQUIRED_PACKAGES+=("@types/node")
+else
+  echo "   ✅ @types/node 已安装"
+fi
+
+# 只安装缺少的依赖
+if [ ${#REQUIRED_PACKAGES[@]} -eq 0 ]; then
+  echo "🎉 所有必需的依赖都已安装！"
+else
+  echo "📦 需要安装 ${#REQUIRED_PACKAGES[@]} 个缺少的依赖包..."
+  echo "   安装列表: ${REQUIRED_PACKAGES[*]}"
+  
+  # 核心 TypeScript 检验依赖 - 这些是安全的，不会与 React/Antd 冲突
+  CORE_TS_PACKAGES=()
+  OPTIONAL_PACKAGES=()
+  
+  for package in "${REQUIRED_PACKAGES[@]}"; do
+    case $package in
+      "typescript"|"@typescript-eslint/eslint-plugin"|"@typescript-eslint/parser"|"@types/node")
+        CORE_TS_PACKAGES+=("$package")
+        ;;
+      *)
+        OPTIONAL_PACKAGES+=("$package")
+        ;;
+    esac
+  done
+  
+  # 先安装核心 TypeScript 依赖
+  if [ ${#CORE_TS_PACKAGES[@]} -gt 0 ]; then
+    echo "🔧 安装核心 TypeScript 依赖..."
+    if ! npm install --save-dev "${CORE_TS_PACKAGES[@]}" 2>/dev/null; then
+      echo "⚠️ 检测到依赖冲突，使用 --legacy-peer-deps 重试核心依赖..."
+      npm install --save-dev --legacy-peer-deps "${CORE_TS_PACKAGES[@]}"
+    fi
+  fi
+  
+  # 对于可选依赖，尝试安装，如果失败就跳过
+  if [ ${#OPTIONAL_PACKAGES[@]} -gt 0 ]; then
+    echo "🔧 尝试安装可选依赖（如果失败将跳过）..."
+    for package in "${OPTIONAL_PACKAGES[@]}"; do
+      echo "   尝试安装: $package"
+      if npm install --save-dev "$package" 2>/dev/null; then
+        echo "   ✅ $package 安装成功"
+      else
+        echo "   ⚠️ $package 安装失败，跳过（不影响 TypeScript 检验功能）"
+      fi
+    done
+  fi
+fi
 
 # 全局安装工具（如果未安装）
 echo "🔧 检查并安装全局工具..."
@@ -213,10 +317,10 @@ fi
 echo "📦 更新 package.json scripts..."
 npm pkg set scripts.build="tsc"
 npm pkg set scripts.dev="tsc --watch"
-npm pkg set scripts.lint="eslint \"src/**/*.ts\""
-npm pkg set scripts.lint:fix="eslint \"src/**/*.ts\" --fix"
-npm pkg set scripts.format="prettier --write \"src/**/*.ts\""
-npm pkg set scripts.format:check="prettier --check \"src/**/*.ts\""
+npm pkg set scripts.lint='eslint "**/*.{ts,tsx}" --ignore-pattern node_modules'
+npm pkg set scripts.lint:fix='eslint "**/*.{ts,tsx}" --ignore-pattern node_modules --fix'
+npm pkg set scripts.format='prettier --write "**/*.{ts,tsx}" --ignore-path .gitignore'
+npm pkg set scripts.format:check='prettier --check "**/*.{ts,tsx}" --ignore-path .gitignore'
 npm pkg set scripts.type-check="tsc --noEmit"
 
 # 设置 package.json 为 ES 模块以支持 ESLint 9.x 配置
@@ -224,11 +328,15 @@ npm pkg set type="module"
 
 # 生成 Makefile
 cat <<EOF > Makefile
-.PHONY: commit commit-force
+.PHONY: commit commit-force lint format
 commit:
 	bash scripts/smart-commit.sh
 commit-force:
 	bash scripts/smart-commit.sh --force
+lint:
+	eslint "**/*.{ts,tsx}" --ignore-pattern node_modules
+format:
+	prettier --write "**/*.{ts,tsx}" --ignore-path .gitignore
 EOF
 
 # 生成 TypeScript 智能提交脚本
@@ -242,10 +350,13 @@ if [[ "$1" == "--force" ]]; then
   FORCE_MODE=true
 fi
 
-# 检查是否存在 src 目录，如果不存在则创建
-if [ ! -d "src" ]; then
-  echo "📁 创建 src 目录..."
-  mkdir -p src
+# 检查是否存在 TypeScript 文件
+if [ ! -f "tsconfig.json" ]; then
+  echo "⚠️ 没有找到 tsconfig.json，跳过 TypeScript 相关检查"
+  echo "🤖 直接执行 git commit..."
+  git commit --quiet --no-edit
+  echo "🎉 提交完成！"
+  exit 0
 fi
 
 # 自动添加文件变更
@@ -256,9 +367,9 @@ fi
 
 echo ""
 echo "✨ Step 1: 检查并格式化 TypeScript 代码..."
-if find src -name "*.ts" -type f | head -1 | grep -q . 2>/dev/null; then
-  echo "🚀 执行：prettier --write \"src/**/*.ts\""
-  prettier --write "src/**/*.ts" || echo "⚠️ 格式化过程中出现问题"
+if find . -name "*.ts" -o -name "*.tsx" -type f | grep -v node_modules | head -1 | grep -q . 2>/dev/null; then
+  echo "🚀 执行：prettier --write \"**/*.{ts,tsx}\" --ignore-path .gitignore"
+  prettier --write "**/*.{ts,tsx}" --ignore-path .gitignore || echo "⚠️ 格式化过程中出现问题"
   
   if [ -n "$(git diff --name-only)" ]; then
     echo "📦 格式化后检测到文件变更，自动暂存"
@@ -268,12 +379,12 @@ if find src -name "*.ts" -type f | head -1 | grep -q . 2>/dev/null; then
     echo "✅ TypeScript 代码格式正确，无需修改"
   fi
 else
-  echo "⚠️ src 目录下没有 TypeScript 文件，跳过格式化"
+  echo "⚠️ 没有找到 TypeScript 文件，跳过格式化"
 fi
 
 echo ""
 echo "🔍 Step 2: 运行 ESLint 检查..."
-if find src -name "*.ts" -type f | head -1 | grep -q . 2>/dev/null; then
+if find . -name "*.ts" -o -name "*.tsx" -type f | grep -v node_modules | head -1 | grep -q . 2>/dev/null; then
   if npm run lint; then
     echo "✅ ESLint 检查通过"
   else
