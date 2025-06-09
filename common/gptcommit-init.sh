@@ -25,6 +25,9 @@ if [ "$LANG" = "en" ]; then
 else
   gptcommit config set output.lang zh-cn
 fi
+gptcommit config set openai.prompt "请你生成一条符合 Conventional Commit 规范的 commit message，只输出纯文本，不要任何 markdown、标题、解释说明。"
+gptcommit config set openai.temperature 0.2
+gptcommit config set openai.retries 2
 gptcommit config set output.conventional_commit true
 gptcommit config set output.include_body true
 gptcommit config set openai.model gpt-3.5-turbo
@@ -36,15 +39,86 @@ cat <<'EOF' > .git/hooks/commit-msg
 #!/usr/bin/env sh
 set -e
 MSGFILE="$1"
-MSG=$(cat "$MSGFILE")
-REGEX='^(feat|fix|docs|style|refactor|perf|test|chore): .+'
-if ! echo "$MSG" | grep -Eq "$REGEX"; then
+
+# 简单有效的清理函数
+clean_markdown() {
+  # 创建临时文件进行处理
+  TEMP_FILE=$(mktemp)
+  cp "$MSGFILE" "$TEMP_FILE"
+
+  # 1. 移除独立的 ### 行
+  sed -i.bak '/^[[:space:]]*###[[:space:]]*$/d' "$TEMP_FILE"
+
+  # 2. 移除行首行尾的 ### 标记
+  sed -i.bak 's/^[[:space:]]*###[[:space:]]*//' "$TEMP_FILE"
+  sed -i.bak 's/[[:space:]]*###[[:space:]]*$//' "$TEMP_FILE"
+
+  # 3. 移除 Markdown 标记
+  sed -i.bak 's/\*\*//g' "$TEMP_FILE"  # 移除粗体
+  sed -i.bak 's/\*//g' "$TEMP_FILE"   # 移除斜体
+
+  # 4. 处理列表项
+  # sed -i.bak 's/^[[:space:]]*[-*+][[:space:]]*/  /' "$TEMP_FILE"
+  # 保留 - 列表标记，只清理多余的空格
+  sed -i.bak 's/^[[:space:]]*[-*+][[:space:]]*/- /' "$TEMP_FILE"
+
+  # 5. 移除文件开头的空行
+  sed -i.bak '/./,$!d' "$TEMP_FILE"
+
+  # 清理备份文件
+  rm -f "${TEMP_FILE}.bak"
+
+  # 6. 特殊处理：如果第一行是 "type:" 格式，尝试与第二行合并
+  FIRST_LINE=$(head -n 1 "$TEMP_FILE")
+  if echo "$FIRST_LINE" | grep -q '^[a-z]*([^)]*)?:[[:space:]]*$\|^[a-z]*:[[:space:]]*$'; then
+    SECOND_LINE=$(sed -n '2p' "$TEMP_FILE" | sed 's/^[[:space:]]*//')
+    if [ -n "$SECOND_LINE" ]; then
+      # 合并第一行和第二行
+      NEW_FIRST_LINE=$(echo "$FIRST_LINE" | sed 's/[[:space:]]*$//')
+      if [ -n "$NEW_FIRST_LINE" ]; then
+        NEW_FIRST_LINE="$NEW_FIRST_LINE $SECOND_LINE"
+        # 创建新文件
+        echo "$NEW_FIRST_LINE" > "$MSGFILE"
+        # 添加剩余行（从第3行开始）
+        tail -n +3 "$TEMP_FILE" >> "$MSGFILE"
+      fi
+    fi
+  else
+    # 直接使用清理后的文件
+    cp "$TEMP_FILE" "$MSGFILE"
+  fi
+
+  rm -f "$TEMP_FILE"
+}
+
+# 应用清理
+clean_markdown
+
+# 获取第一行进行验证
+FIRST_LINE=$(head -n 1 "$MSGFILE" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+# 如果第一行为空，尝试获取第一个非空行
+if [ -z "$FIRST_LINE" ]; then
+  FIRST_LINE=$(grep -m 1 -v '^[[:space:]]*$' "$MSGFILE" 2>/dev/null | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || echo "")
+fi
+
+# 验证格式
+REGEX='^(feat|fix|docs|style|refactor|perf|test|chore)(\([^)]+\))?: .+'
+
+if [ -z "$FIRST_LINE" ]; then
+  echo "❌ Error: 提交信息为空" >&2
+  exit 1
+elif ! echo "$FIRST_LINE" | grep -Eq "$REGEX"; then
   echo "⧗ Invalid commit message format." >&2
-  echo "   应符合: type: subject" >&2
+  echo "   应符合: type: subject 或 type(scope): subject" >&2
+  echo "   当前第一行: $FIRST_LINE" >&2
   echo "   示例: feat: add new endpoint" >&2
   echo "   详情规范请看: https://github.com/tencent-international/specification/blob/main/README.md" >&2
   exit 1
 fi
+
+echo "✅ Commit message cleaned and validated"
+echo "   第一行: $FIRST_LINE"
 EOF
 chmod +x .git/hooks/commit-msg
 
