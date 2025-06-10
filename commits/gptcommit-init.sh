@@ -103,7 +103,7 @@ if [ -z "$FIRST_LINE" ]; then
 fi
 
 # 验证格式
-REGEX='^(feat|fix|docs|style|refactor|perf|test|chore)(\([^)]+\))?: .+'
+REGEX='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([^)]+\))?: .+'
 
 if [ -z "$FIRST_LINE" ]; then
   echo "❌ Error: 提交信息为空" >&2

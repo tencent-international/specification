@@ -1,0 +1,16 @@
+# Bitbucket 配置（包含敏感信息）
+.bitbucket-config
+
+# 临时文件
+*.tmp
+*.temp
+
+# MacOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# 日志文件
+*.log 
