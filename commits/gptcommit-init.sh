@@ -40,6 +40,9 @@ cat <<'EOF' > .git/hooks/commit-msg
 set -e
 MSGFILE="$1"
 
+# 检查是否是重试标记文件
+RETRY_FLAG_FILE=".git/gptcommit_retry_flag"
+
 # 简单有效的清理函数
 clean_markdown() {
   # 创建临时文件进行处理
@@ -74,7 +77,7 @@ clean_markdown() {
     SECOND_LINE=$(sed -n '2p' "$TEMP_FILE" | sed 's/^[[:space:]]*//')
     if [ -n "$SECOND_LINE" ]; then
       # 合并第一行和第二行
-      NEW_FIRST_LINE=$(echo "$FIRST_LINE" | sed 's/[[:space:]]*$//')
+      NEW_FIRST_LINE=$(echo "$FIRST_LINE" | sed 's/[[:space:]]*//')
       if [ -n "$NEW_FIRST_LINE" ]; then
         NEW_FIRST_LINE="$NEW_FIRST_LINE $SECOND_LINE"
         # 创建新文件
@@ -109,19 +112,40 @@ if [ -z "$FIRST_LINE" ]; then
   echo "❌ Error: 提交信息为空" >&2
   exit 1
 elif ! echo "$FIRST_LINE" | grep -Eq "$REGEX"; then
-  echo "⧗ Invalid commit message format." >&2
-  echo "   应符合: type: subject 或 type(scope): subject" >&2
-  echo "   当前第一行: $FIRST_LINE" >&2
-  echo "" >&2
-  echo "📝 完整的提交信息内容:" >&2
-  echo "----------------------------------------" >&2
-  cat "$MSGFILE" >&2
-  echo "----------------------------------------" >&2
-  echo "" >&2
-  echo "   示例: feat: add new endpoint" >&2
-  echo "   详情规范请看: https://github.com/tencent-international/specification/blob/main/README.md" >&2
-  exit 1
+  # 检查是否已经重试过
+  if [ -f "$RETRY_FLAG_FILE" ]; then
+    # 已经重试过了，删除标记文件并显示错误
+    rm -f "$RETRY_FLAG_FILE"
+    echo "⧗ Invalid commit message format (已重试一次)." >&2
+    echo "   应符合: type: subject 或 type(scope): subject" >&2
+    echo "   当前第一行: $FIRST_LINE" >&2
+    echo "" >&2
+    echo "📝 完整的提交信息内容:" >&2
+    echo "----------------------------------------" >&2
+    cat "$MSGFILE" >&2
+    echo "----------------------------------------" >&2
+    echo "" >&2
+    echo "   示例: feat: add new endpoint" >&2
+    echo "   详情规范请看: https://github.com/tencent-international/specification/blob/main/README.md" >&2
+    exit 1
+  else
+    # 第一次失败，创建重试标记并自动重试
+    touch "$RETRY_FLAG_FILE"
+    echo "⚠️  第一次 commit 格式不正确，正在自动重试..." >&2
+    echo "   当前第一行: $FIRST_LINE" >&2
+    echo "🔄 执行 gptcommit uninstall && gptcommit install..." >&2
+
+    # 重新安装 gptcommit 钩子
+    gptcommit uninstall > /dev/null 2>&1 || true
+    gptcommit install > /dev/null 2>&1 || true
+
+    echo "🔄 重新生成 commit 消息并重试..." >&2
+    exit 1
+  fi
 fi
+
+# 验证通过，清理重试标记文件
+rm -f "$RETRY_FLAG_FILE"
 
 echo "✅ Commit message cleaned and validated"
 echo "   第一行: $FIRST_LINE"
@@ -132,4 +156,10 @@ echo ""
 echo "✅ GPTCommit 初始化完成！"
 echo "   - GPTCommit 已配置"
 echo "   - Conventional Commit 格式校验钩子已安装"
+echo "   - 增加自动重试机制：格式错误时自动重试一次"
+echo ""
+echo "🚀 使用方法："
+echo "   - 运行 'make commit' 或 'bash scripts/smart-commit.sh'"
+echo "   - 如果 commit 格式不正确，系统会自动重试一次"
+echo "   - 重试仍失败时会显示详细错误信息"
 echo ""
