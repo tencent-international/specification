@@ -14,9 +14,9 @@
 ### 1. 初始化项目
 #### 在Android项目根目录下执行
 ```bash
-# 复制 android-lint-init.sh 和 commits/gptcommit-init.sh 到项目根目录
-bash gptcommit-init.sh
-bash android-lint-init.sh
+# 复制 android-lint-init.sh 和 commits/gptcommit-init.sh 到项目根目录下的 /scripts
+bash ./scripts/gptcommit-init.sh
+bash ./scripts/android-lint-init.sh
 ```
 
 ### 2. 配置Gradle文件
