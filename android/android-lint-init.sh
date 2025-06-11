@@ -435,6 +435,23 @@ commit:
 commit-force:
 	bash scripts/android-smart-commit.sh --force
 
+pr:
+	@if [ ! -f scripts/bitbucket-pr.sh ]; then \
+		echo "❌ 错误: 找不到 scripts/bitbucket-pr.sh 脚本文件"; \
+		echo ""; \
+		echo "📁 请将 bitbucket-pr.sh 脚本放置到项目根目录的 scripts/ 文件夹下:"; \
+		echo "   mkdir -p scripts"; \
+		echo "   cp /path/to/bitbucket-pr.sh scripts/"; \
+		echo "   chmod +x scripts/bitbucket-pr.sh"; \
+		echo ""; \
+		echo "💡 或者从以下位置获取脚本:"; \
+		echo "   https://github.com/tencent-international/specification/blob/main/commits/bitbucket-pr.sh"; \
+		echo ""; \
+		exit 1; \
+	else \
+		bash scripts/bitbucket-pr.sh; \
+	fi
+
 setup:
 	@echo \"📋 配置说明：\"
 	@echo \"1. 将 gradle-lint-config.${DSL_TYPE} 中的内容添加到对应的 Gradle 文件\"

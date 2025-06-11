@@ -1,275 +1,289 @@
-# Commit 工具初始化脚本
+# Git 工作流自动化脚本
 
-本目录包含三个 commit 工具初始化脚本，用于规范化 Git 提交信息格式。
+这个目录包含两个用于优化 Git 工作流的脚本，帮助团队规范代码提交和自动化 Pull Request 流程。
 
-## 脚本说明
+## 📋 脚本概览
 
-### 1. gptcommit-init.sh
-- **功能**: 安装并配置 GPTCommit 工具
-- **特点**: 使用 OpenAI API 自动生成符合 Conventional Commit 规范的提交信息
-- **依赖**: Homebrew 和 OpenAI API Key
-- **自动生成**: 支持 `git commit --quiet --no-edit` 自动生成提交信息
+| 脚本 | 功能 | 用途 |
+|------|------|------|
+| `gptcommit-init.sh` | Git Commit 验证 | 规范化提交信息格式 |
+| `bitbucket-pr.sh` | PR 自动化 | 自动创建、批准和合并 PR |
 
-### 2. gh-copilot-init.sh  
-- **功能**: 安装并配置 GitHub Copilot CLI
-- **特点**: 集成 GitHub Copilot，支持多语言 lint 工具检测
-- **依赖**: GitHub CLI 和 Copilot 订阅
-- **自动生成**: 支持 `git commit --quiet --no-edit` 自动生成提交信息
+---
 
-### 3. open-commit-init.sh
-- **功能**: 安装并配置 OpenCommit 工具
-- **特点**: 使用 OpenAI API，专门为 git 提交信息优化的 AI 工具
-- **依赖**: Node.js/npm 和 OpenAI API Key
-- **自动生成**: 支持 `git commit --quiet --no-edit` 自动生成提交信息
-- **注意**: OpenCommit 官方只通过 npm 分发，没有 Homebrew 包
+## 🔧 gptcommit-init.sh - Git Commit 验证脚本
 
-## 为什么 OpenCommit 不使用 Homebrew？
+### 功能介绍
 
-OpenCommit 是基于 Node.js 开发的工具，官方选择通过 npm 分发而不是 Homebrew，原因包括：
+自动设置 Git commit-msg 钩子，强制执行 [Conventional Commits](https://www.conventionalcommits.org/) 规范，确保团队提交信息的一致性。
 
-1. **跨平台统一**: npm 在 Windows、Linux、macOS 上都可用
-2. **生态系统**: 作为 Node.js 工具，npm 是其天然的包管理器
-3. **版本管理**: npm 提供更好的依赖管理和版本控制
-4. **开发便利**: 工具本身使用 JavaScript/TypeScript 开发
+### 支持的提交类型
 
-如果你更喜欢 Homebrew 风格的安装，可以通过以下方式安装 Node.js：
-```bash
-brew install node  # 这会同时安装 npm
-npm install -g opencommit  # 然后通过 npm 安装 OpenCommit
-```
-
-## 工具切换
-
-三个脚本通过覆盖 Git hooks 实现切换：
-
-```bash
-# 使用 GPTCommit
-./commits/gptcommit-init.sh       # 覆盖 hooks，切换到 GPTCommit 模式
-
-# 使用 GitHub Copilot  
-./commits/gh-copilot-init.sh      # 覆盖 hooks，切换到 Copilot 模式
-
-# 使用 OpenCommit
-./commits/open-commit-init.sh     # 覆盖 hooks，切换到 OpenCommit 模式
-```
-
-## 主要功能
-
-### 🤖 自动生成提交信息
-三个脚本都支持智能生成提交信息：
-
-```bash
-# 方式一：自动生成（推荐）
-git add .
-git commit --quiet --no-edit  # 自动分析变更并生成提交信息
-
-# 方式二：手动输入
-git add .
-git commit -m "feat: add new feature"
-
-# 方式三：交互式编辑
-git add .
-git commit  # 打开编辑器，可以修改自动生成的信息
-```
-
-### 🔍 自动 Lint 检测
-`gh-copilot-init.sh` 自动检测项目中的 lint 工具并集成：
-
-| 语言 | 支持的工具 |
-|------|------------|
-| JavaScript/TypeScript | ESLint, Prettier, Stylelint |
-| Python | Black, Flake8, isort |
-| Rust | Clippy, rustfmt |
-| Go | golangci-lint, gofmt |
-
-### 📝 Conventional Commit 验证
-三种模式都支持 Conventional Commit 格式验证：
 - `feat`: 新功能
-- `fix`: 修复 bug
+- `fix`: 问题修复
 - `docs`: 文档更新
-- `style`: 代码格式化
-- `refactor`: 重构
+- `style`: 代码格式化（不影响功能）
+- `refactor`: 代码重构
 - `perf`: 性能优化
 - `test`: 测试相关
 - `chore`: 构建过程或辅助工具的变动
+- `ci`: CI/CD 相关
+- `build`: 构建系统变动
+- `revert`: 回滚提交
 
-## 使用步骤
+### 使用方法
 
-### 方式一：使用 GPTCommit
-
-1. 运行初始化脚本：
 ```bash
-./commits/gptcommit-init.sh
+# 在 Git 仓库根目录下运行
+bash commits/gptcommit-init.sh
 ```
 
-2. 输入 OpenAI API Key 和语言偏好
+### 提交信息格式
 
-3. 使用智能提交：
-```bash
-git add .
-git commit --quiet --no-edit  # 自动分析并生成提交信息
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
 ```
 
-### 方式二：使用 GitHub Copilot
+#### 示例
 
-1. 运行初始化脚本：
 ```bash
-./commits/gh-copilot-init.sh
+# ✅ 正确格式
+git commit -m "feat: 添加用户登录功能"
+git commit -m "fix(auth): 修复登录验证逻辑"
+git commit -m "docs: 更新 API 文档"
+git commit -m "ci: 更新依赖项和CI/CD管道中的配置"
+
+# ❌ 错误格式 - 会被拒绝
+git commit -m "添加新功能"
+git commit -m "修复bug"
+git commit -m "update docs"
 ```
 
-2. 登录 GitHub 账号
+### 安装效果
 
-3. 使用智能提交：
+脚本会在 `.git/hooks/` 目录下创建 `commit-msg` 钩子，每次提交时自动验证提交信息格式。
+
+---
+
+## 🚀 bitbucket-pr.sh - Bitbucket PR 自动化脚本
+
+### 功能介绍
+
+一键自动化 Bitbucket Pull Request 流程，支持创建、批准和合并 PR，特别适合有管理员权限的开发者使用。
+
+### 核心功能
+
+- ✅ **自动仓库检测**：从 git remote 自动解析 workspace 和 repository
+- ✅ **智能配置管理**：首次运行自动引导配置，持久化保存用户凭据
+- ✅ **一键 PR 流程**：创建 → 批准 → 合并，全自动完成
+- ✅ **灵活参数支持**：支持自定义 PR 标题、描述和目标分支
+- ✅ **安全权限控制**：配置文件采用 600 权限，保护敏感信息
+
+### 前置要求
+
+1. **Bitbucket 账户**：需要有仓库的管理员权限
+2. **App Password**：在 Bitbucket Settings → App passwords 中创建
+   - 需要权限：`Repositories: Read, Write` 和 `Pull requests: Read, Write`
+
+### 首次配置
+
+第一次运行时会自动引导您完成配置：
+
 ```bash
-git add .
-git commit --quiet --no-edit  # 自动分析并生成提交信息
+bash commits/bitbucket-pr.sh
 ```
 
-4. 启用 pre-commit lint 检查（可选）：
+脚本会提示输入：
+- Bitbucket 用户名
+- Bitbucket App Password
+
+配置会保存到 `~/.bitbucket-pr/config`，下次使用时自动加载。
+
+### 使用方法
+
+#### 基本用法
+
 ```bash
-ln -sf $(pwd)/.git/hooks/pre-commit-lint .git/hooks/pre-commit
+# 最简单的用法 - 使用默认设置
+bash commits/bitbucket-pr.sh
+
+# 查看帮助信息
+bash commits/bitbucket-pr.sh --help
 ```
 
-### 方式三：使用 OpenCommit
+#### 高级用法
 
-1. 确保已安装 Node.js 和 npm/yarn/pnpm
-
-2. 运行初始化脚本：
 ```bash
-./commits/open-commit-init.sh
+# 自定义 PR 标题和描述
+bash commits/bitbucket-pr.sh \
+  --title "feat: 添加新的用户管理功能" \
+  --desc "实现了用户创建、删除和权限管理功能"
+
+# 指定目标分支
+bash commits/bitbucket-pr.sh --target main
+
+# 组合使用
+bash commits/bitbucket-pr.sh \
+  --title "fix: 修复登录问题" \
+  --desc "修复了用户在某些情况下无法登录的bug" \
+  --target develop
 ```
 
-3. 输入 OpenAI API Key 和语言偏好
+#### 配置管理
 
-4. 使用智能提交：
 ```bash
-git add .
-git commit --quiet --no-edit  # 自动分析并生成提交信息
+# 重新配置或管理现有配置
+bash commits/bitbucket-pr.sh --config
 ```
 
-## 提交信息生成策略
+### 完整参数列表
 
-### GPTCommit 模式
-- 使用 OpenAI GPT 模型分析代码变更
-- 基于上下文和语义理解生成精准的提交信息
-- 支持中英文输出
-- 生成质量较高，但需要 API 费用
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `-h, --help` | 显示帮助信息 | `--help` |
+| `-c, --config` | 管理配置 | `--config` |
+| `-t, --title` | 指定 PR 标题 | `--title "feat: 新功能"` |
+| `-d, --desc` | 指定 PR 描述 | `--desc "详细描述"` |
+| `--target` | 指定目标分支 | `--target develop` |
 
-### GitHub Copilot 模式  
-- 优先使用 GitHub Copilot 建议
-- 如果 Copilot 不可用，使用基于文件变更的智能推断
-- 支持中英文输出
-- 免费使用（需要 Copilot 订阅）
-- 额外提供 lint 工具集成
+### 工作流程
 
-### OpenCommit 模式
-- 专门为 git 提交信息设计的 AI 工具
-- 使用 OpenAI API，针对代码变更优化
-- 支持多种配置选项和提示模板
-- 生成质量高且稳定
-- 需要 Node.js 环境和 OpenAI API Key
+1. **🔍 自动检测**：解析 git remote 获取仓库信息
+2. **📂 加载配置**：读取本地配置或引导首次配置
+3. **🎯 选择目标分支**：交互式选择或使用参数指定
+4. **📤 推送分支**：将当前分支推送到远程
+5. **🔄 创建 PR**：调用 Bitbucket API 创建 Pull Request
+6. **👍 自动批准**：以管理员身份批准 PR
+7. **🔀 自动合并**：使用 squash 策略合并 PR
+8. **🎉 完成**：显示 PR 链接和成功信息
 
-## Git Hooks
+### 支持的 Git Remote 格式
 
-脚本会创建以下 Git hooks：
+脚本支持自动解析以下格式的 Bitbucket URL：
 
-### GPTCommit 模式
-- **commit-msg**: GPTCommit 的 markdown 清理和 Conventional Commit 验证
+```bash
+# HTTPS 格式
+https://bitbucket.org/workspace/repo.git
+https://username@bitbucket.org/workspace/repo.git
 
-### GitHub Copilot 模式
-- **prepare-commit-msg**: 自动生成提交信息（支持 `git commit --quiet --no-edit`）
-- **commit-msg**: Conventional Commit 格式验证
-- **pre-commit-lint**: 运行 lint 检查（可选启用）
+# SSH 格式  
+git@bitbucket.org:workspace/repo.git
+```
 
-### OpenCommit 模式
-- **prepare-commit-msg**: 使用 OpenCommit 自动生成提交信息
-- **commit-msg**: Markdown 清理和 Conventional Commit 验证
+### 错误处理
 
-## 工具对比
+- **权限不足**：确保有仓库管理员权限
+- **分支冲突**：如果目标分支有冲突，合并会失败
+- **网络问题**：检查网络连接和 Bitbucket 服务状态
+- **配置错误**：使用 `--config` 重新配置
 
-| 特性 | GPTCommit | GitHub Copilot | OpenCommit |
-|------|-----------|----------------|------------|
-| 安装方式 | Homebrew | GitHub CLI 扩展 | npm/yarn/pnpm |
-| API 依赖 | OpenAI | GitHub Copilot | OpenAI |
-| 专业性 | Git 提交专用 | 通用命令行助手 | Git 提交专用 |
-| 配置复杂度 | 中等 | 简单 | 简单 |
-| Lint 集成 | ❌ | ✅ | ❌ |
-| 生成质量 | 高 | 中等 | 高 |
-| 成本 | OpenAI API 费用 | Copilot 订阅费用 | OpenAI API 费用 |
+---
 
-## 故障排除
+## 🛠️ 环境要求
+
+### 系统要求
+
+- **操作系统**：macOS, Linux, Windows (WSL)
+- **Shell**：Bash 4.0+
+- **Git**：2.0+
+- **curl**：用于 API 调用
+
+### 权限要求
+
+- **Git 仓库**：需要在 Git 仓库根目录下运行
+- **Bitbucket 权限**：
+  - `gptcommit-init.sh`：无特殊要求
+  - `bitbucket-pr.sh`：需要仓库管理员权限
+
+---
+
+## 📝 最佳实践
+
+### 团队协作建议
+
+1. **统一提交规范**：所有成员都应该安装 `gptcommit-init.sh`
+2. **PR 模板化**：使用 `bitbucket-pr.sh` 的参数功能创建一致的 PR
+3. **分支策略**：建议配合 Git Flow 或 GitHub Flow 使用
+
+### 安全建议
+
+1. **App Password 管理**：
+   - 定期更换 App Password
+   - 不要在代码中硬编码密码
+   - 使用脚本的配置管理功能
+
+2. **权限控制**：
+   - 只给必要的人员管理员权限
+   - 定期审查仓库权限
+
+### 自动化集成
+
+可以将这些脚本集成到 Makefile 或 package.json 中：
+
+```makefile
+# Makefile 示例
+.PHONY: init-hooks pr
+
+init-hooks:
+	bash commits/gptcommit-init.sh
+
+pr:
+	bash commits/bitbucket-pr.sh
+```
+
+```json
+{
+  "scripts": {
+    "init-hooks": "bash commits/gptcommit-init.sh",
+    "pr": "bash commits/bitbucket-pr.sh"
+  }
+}
+```
+
+---
+
+## 🆘 故障排除
 
 ### 常见问题
 
-1. **OpenAI API Key 错误**
-   ```bash
-   # GPTCommit
-   gptcommit config set openai.api_key "your-new-key"
-   
-   # OpenCommit
-   oc config set OCO_OPENAI_API_KEY="your-new-key"
-   ```
+#### gptcommit-init.sh
 
-2. **GitHub 登录问题**
-   ```bash
-   gh auth logout
-   gh auth login
-   ```
+**Q: 提交被拒绝，提示格式错误？**  
+A: 请确保提交信息符合 `type: description` 格式，type 必须是支持的类型之一。
 
-3. **Node.js 环境问题（OpenCommit）**
-   ```bash
-   # 检查 Node.js 版本
-   node --version
-   npm --version
-   
-   # 重新安装 OpenCommit
-   npm uninstall -g opencommit
-   npm install -g opencommit
-   ```
+**Q: 想要禁用提交验证？**  
+A: 删除 `.git/hooks/commit-msg` 文件即可。
 
-4. **自动生成不工作**
-   ```bash
-   # 检查钩子是否存在且可执行
-   ls -la .git/hooks/prepare-commit-msg
-   chmod +x .git/hooks/prepare-commit-msg
-   ```
+#### bitbucket-pr.sh
 
-5. **权限问题**
-   ```bash
-   chmod +x .git/hooks/*
-   ```
+**Q: 提示 "无法获取 git remote URL"？**  
+A: 确保在 Git 仓库中运行，且配置了 origin 远程仓库。
 
-6. **重新初始化**
-   ```bash
-   # 重新运行对应的初始化脚本
-   ./commits/gptcommit-init.sh      # 或
-   ./commits/gh-copilot-init.sh     # 或
-   ./commits/open-commit-init.sh
-   ```
+**Q: API 调用失败，HTTP 401？**  
+A: 检查 Bitbucket 用户名和 App Password 是否正确，使用 `--config` 重新配置。
 
-### 调试提示
+**Q: 合并失败，HTTP 409？**  
+A: 可能存在分支冲突，需要手动解决冲突后重试。
 
-```bash
-# 查看 Git hooks 执行情况
-GIT_TRACE=1 git commit --quiet --no-edit
+### 获取帮助
 
-# 手动测试 hooks
-.git/hooks/prepare-commit-msg /tmp/test-msg
-cat /tmp/test-msg
+如果遇到问题，可以：
 
-# OpenCommit 调试
-oc commit --dry-run
-oc config
-```
+1. 查看脚本的帮助信息：`bash script.sh --help`
+2. 检查 Git 和网络连接状态
+3. 验证 Bitbucket 权限和配置
+4. 查看错误日志和 HTTP 响应码
 
-## 兼容性
+---
 
-- **操作系统**: macOS, Linux
-- **Shell**: bash, zsh
-- **Git**: 2.0+
-- **Node.js**: 16+ (OpenCommit 需要)
-- **Python**: 3.7+ (如使用 Python lint 工具)
+## 📄 许可证
 
-## 许可证
+这些脚本基于 MIT 许可证发布，可以自由使用、修改和分发。
 
-遵循项目根目录的许可证条款。 
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request 来改进这些脚本！
