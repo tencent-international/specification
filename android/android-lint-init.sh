@@ -4,26 +4,98 @@ set -e
 # 创建脚本目录
 mkdir -p scripts
 
-# 检查是否在Android项目根目录
-if [ ! -f "build.gradle" ] && [ ! -f "build.gradle.kts" ]; then
-  echo "⚠️  当前目录不是Android项目根目录"
-  echo "   请确保在包含 build.gradle 或 build.gradle.kts 的目录下运行此脚本"
+# 智能检测Android项目结构
+detect_android_project() {
+  local project_root=""
+  local current_dir="$(pwd)"
+  
+  # 向上查找Android项目根目录
+  while [ "$current_dir" != "/" ]; do
+    if [ -f "$current_dir/build.gradle" ] || [ -f "$current_dir/build.gradle.kts" ]; then
+      if [ -f "$current_dir/settings.gradle" ] || [ -f "$current_dir/settings.gradle.kts" ]; then
+        project_root="$current_dir"
+        break
+      fi
+    fi
+    current_dir=$(dirname "$current_dir")
+  done
+  
+  if [ -z "$project_root" ]; then
+    # 如果没有找到根目录，检查当前目录是否是模块目录
+    if [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+      echo "module"
+      return
+    else
+      echo "not_android"
+      return
+    fi
+  fi
+  
+  echo "$project_root"
+}
+
+# 检测项目类型和结构
+PROJECT_LOCATION=$(detect_android_project)
+
+if [ "$PROJECT_LOCATION" = "not_android" ]; then
+  echo "❌ 错误：当前目录不是Android项目"
+  echo "   请在Android项目根目录或模块目录下运行此脚本"
   exit 1
+elif [ "$PROJECT_LOCATION" = "module" ]; then
+  echo "🔍 检测到当前目录是Android模块，将为模块配置lint"
+  PROJECT_ROOT="$(pwd)"
+  IS_MODULE=true
+else
+  echo "🔍 检测到Android项目根目录: $PROJECT_LOCATION"
+  PROJECT_ROOT="$PROJECT_LOCATION"
+  IS_MODULE=false
 fi
 
-# 检测项目类型
-PROJECT_TYPE="unknown"
-if [ -f "settings.gradle.kts" ] || [ -f "build.gradle.kts" ]; then
-  PROJECT_TYPE="kotlin-dsl"
-elif [ -f "settings.gradle" ] || [ -f "build.gradle" ]; then
-  PROJECT_TYPE="groovy-dsl"
+# 检测DSL类型
+DSL_TYPE="unknown"
+if [ -f "$PROJECT_ROOT/build.gradle.kts" ] || [ -f "build.gradle.kts" ]; then
+  DSL_TYPE="kotlin"
+elif [ -f "$PROJECT_ROOT/build.gradle" ] || [ -f "build.gradle" ]; then
+  DSL_TYPE="groovy"
 fi
 
-echo "🔍 检测到项目类型: $PROJECT_TYPE"
+# 检测模块类型
+MODULE_TYPE="unknown"
+if [ -f "build.gradle" ]; then
+  if grep -q "com.android.application" "build.gradle" 2>/dev/null; then
+    MODULE_TYPE="app"
+  elif grep -q "com.android.library" "build.gradle" 2>/dev/null; then
+    MODULE_TYPE="library"
+  fi
+elif [ -f "build.gradle.kts" ]; then
+  if grep -q "com.android.application" "build.gradle.kts" 2>/dev/null; then
+    MODULE_TYPE="app"
+  elif grep -q "com.android.library" "build.gradle.kts" 2>/dev/null; then
+    MODULE_TYPE="library"
+  fi
+fi
+
+echo "📋 项目信息："
+echo "   DSL类型: $DSL_TYPE"
+echo "   模块类型: $MODULE_TYPE"
+echo "   是否为模块: $IS_MODULE"
+
+# 安全生成配置文件的函数
+safe_create_file() {
+  local file_path="$1"
+  local file_content="$2"
+  
+  if [ -f "$file_path" ]; then
+    echo "⚠️  $file_path 已存在，创建备份: ${file_path}.backup"
+    cp "$file_path" "${file_path}.backup"
+  fi
+  
+  echo "$file_content" > "$file_path"
+  echo "✅ 已生成: $file_path"
+}
 
 # 生成 lint.xml 配置文件
-cat <<EOF > lint.xml
-<?xml version="1.0" encoding="UTF-8"?>
+LINT_CONFIG='<?xml version="1.0" encoding="UTF-8"?>
 <lint>
     <!-- 错误级别规则 -->
     <issue id="HardcodedText" severity="error" />
@@ -59,12 +131,12 @@ cat <<EOF > lint.xml
     <!-- Kotlin 相关 -->
     <issue id="UnsafeCall" severity="error" />
     <issue id="NullSafeMutableLiveData" severity="warning" />
-</lint>
-EOF
+</lint>'
+
+safe_create_file "lint.xml" "$LINT_CONFIG"
 
 # 生成 ktlint 配置文件 (.editorconfig)
-cat <<EOF > .editorconfig
-root = true
+EDITORCONFIG='root = true
 
 [*]
 charset = utf-8
@@ -86,8 +158,9 @@ indent_size = 4
 indent_size = 2
 
 [*.md]
-trim_trailing_whitespace = false
-EOF
+trim_trailing_whitespace = false'
+
+safe_create_file ".editorconfig" "$EDITORCONFIG"
 
 # 生成 .gitignore（如果不存在）
 if [ ! -f ".gitignore" ]; then
@@ -173,16 +246,19 @@ lint-report.txt
 EOF
 fi
 
-# 根据项目类型生成 Gradle 配置
-if [ "$PROJECT_TYPE" = "kotlin-dsl" ]; then
-  # Kotlin DSL 项目配置
-  cat <<'EOF' > gradle-config.kts
-// 将以下内容添加到你的 app/build.gradle.kts 文件中
+# 生成智能的Gradle配置
+generate_gradle_config() {
+  if [ "$DSL_TYPE" = "kotlin" ]; then
+    cat > "gradle-lint-config.kts" << 'EOF'
+// ============================================
+// Android Lint 配置
+// ============================================
+// 将以下内容添加到你的模块 build.gradle.kts 文件的 android {} 块中
 
 android {
     lint {
-        // 启用 lint 检查
-        abortOnError = true
+        // 基本配置
+        abortOnError = false  // 建议先设为false，修复问题后再设为true
         warningsAsErrors = false
         checkDependencies = true
         checkGeneratedSources = false
@@ -197,55 +273,62 @@ android {
         htmlOutput = file("$buildDir/reports/lint/lint-results.html")
         xmlReport = true
         xmlOutput = file("$buildDir/reports/lint/lint-results.xml")
+        textReport = true
+        textOutput = file("$buildDir/reports/lint/lint-results.txt")
         
         // 使用配置文件
-        lintConfig = file("../lint.xml")
+        lintConfig = file("lint.xml")
         
-        // 基线文件
-        baseline = file("lint-baseline.xml")
+        // 基线文件（可选）
+        // baseline = file("lint-baseline.xml")
     }
-    
-    // Ktlint 配置
-    // 在项目根目录的 build.gradle.kts 添加：
-    /*
-    plugins {
-        id("org.jlleitschuh.gradle.ktlint") version "11.6.1" apply false
-    }
-    */
-    
-    // 在 app/build.gradle.kts 添加：
-    /*
-    plugins {
-        id("org.jlleitschuh.gradle.ktlint")
-    }
-    
-    ktlint {
-        version.set("0.50.0")
-        debug.set(false)
-        verbose.set(true)
-        android.set(true)
-        outputToConsole.set(true)
-        outputColorName.set("RED")
-        ignoreFailures.set(false)
-        enableExperimentalRules.set(false)
-        
-        filter {
-            exclude("**/generated/**")
-            include("**/kotlin/**")
-        }
-    }
-    */
 }
+
+// ============================================
+// Ktlint 配置
+// ============================================
+// 1. 在项目根目录的 build.gradle.kts 添加插件：
+/*
+plugins {
+    id("org.jlleitschuh.gradle.ktlint") version "12.0.3" apply false
+}
+*/
+
+// 2. 在模块的 build.gradle.kts 添加：
+/*
+plugins {
+    id("org.jlleitschuh.gradle.ktlint")
+}
+
+ktlint {
+    version.set("1.0.1")
+    debug.set(false)
+    verbose.set(true)
+    android.set(true)
+    outputToConsole.set(true)
+    outputColorName.set("RED")
+    ignoreFailures.set(false)
+    
+    filter {
+        exclude("**/generated/**")
+        exclude("**/build/**")
+        include("**/kotlin/**")
+        include("**/java/**")
+    }
+}
+*/
 EOF
-else
-  # Groovy DSL 项目配置
-  cat <<'EOF' > gradle-config.gradle
-// 将以下内容添加到你的 app/build.gradle 文件中
+  else
+    cat > "gradle-lint-config.gradle" << 'EOF'
+// ============================================
+// Android Lint 配置
+// ============================================
+// 将以下内容添加到你的模块 build.gradle 文件的 android {} 块中
 
 android {
     lint {
-        // 启用 lint 检查
-        abortOnError true
+        // 基本配置
+        abortOnError false  // 建议先设为false，修复问题后再设为true
         warningsAsErrors false
         checkDependencies true
         checkGeneratedSources false
@@ -260,57 +343,91 @@ android {
         htmlOutput file("$buildDir/reports/lint/lint-results.html")
         xmlReport true
         xmlOutput file("$buildDir/reports/lint/lint-results.xml")
+        textReport true
+        textOutput file("$buildDir/reports/lint/lint-results.txt")
         
         // 使用配置文件
-        lintConfig file("../lint.xml")
+        lintConfig file("lint.xml")
         
-        // 基线文件
-        baseline file("lint-baseline.xml")
+        // 基线文件（可选）
+        // baseline file("lint-baseline.xml")
     }
 }
 
+// ============================================
 // Ktlint 配置
-// 在项目根目录的 build.gradle 添加：
+// ============================================
+// 1. 在项目根目录的 build.gradle 添加插件：
 /*
 plugins {
-    id "org.jlleitschuh.gradle.ktlint" version "11.6.1" apply false
+    id "org.jlleitschuh.gradle.ktlint" version "12.0.3" apply false
 }
 */
 
-// 在 app/build.gradle 添加：
+// 2. 在模块的 build.gradle 添加：
 /*
 apply plugin: "org.jlleitschuh.gradle.ktlint"
 
 ktlint {
-    version = "0.50.0"
+    version = "1.0.1"
     debug = false
     verbose = true
     android = true
     outputToConsole = true
     outputColorName = "RED"
     ignoreFailures = false
-    enableExperimentalRules = false
     
     filter {
         exclude("**/generated/**")
+        exclude("**/build/**")
         include("**/kotlin/**")
+        include("**/java/**")
     }
 }
 */
 EOF
-fi
+  fi
+  
+  echo "✅ 已生成: gradle-lint-config.${DSL_TYPE}"
+}
 
-# 生成 Makefile
-cat <<EOF > Makefile
-.PHONY: lint ktlint format commit commit-force
+generate_gradle_config
+
+# 生成智能的Makefile
+MAKEFILE_CONTENT=".PHONY: lint ktlint format commit commit-force setup help
+
+help:
+	@echo \"📋 可用命令:\"
+	@echo \"  make lint         - 运行 Android Lint 检查\"
+	@echo \"  make ktlint       - 运行 Ktlint 检查\"
+	@echo \"  make format       - 自动格式化 Kotlin 代码\"
+	@echo \"  make commit       - 智能提交（有检查）\"
+	@echo \"  make commit-force - 强制提交（跳过检查）\"
+	@echo \"  make setup        - 显示配置说明\"
+
 lint:
-	./gradlew lint
+	@if [ -f \"gradlew\" ]; then \\
+		echo \"🔍 运行 Android Lint...\"; \\
+		./gradlew lint || echo \"⚠️ Lint 检查发现问题，请查看报告\"; \\
+	else \\
+		echo \"❌ 未找到 gradlew，请在项目根目录运行\"; \\
+	fi
 
 ktlint:
-	./gradlew ktlintCheck
+	@if [ -f \"gradlew\" ]; then \\
+		echo \"🔍 运行 Ktlint 检查...\"; \\
+		./gradlew ktlintCheck || echo \"⚠️ Ktlint 检查发现问题\"; \\
+	else \\
+		echo \"❌ 未找到 gradlew，请在项目根目录运行\"; \\
+	fi
 
 format:
-	./gradlew ktlintFormat
+	@if [ -f \"gradlew\" ]; then \\
+		echo \"🔧 格式化 Kotlin 代码...\"; \\
+		./gradlew ktlintFormat || echo \"⚠️ 项目可能未配置 Ktlint\"; \\
+	else \\
+		echo \"❌ 未找到 gradlew，请在项目根目录运行\"; \\
+	fi
 
 commit:
 	bash scripts/android-smart-commit.sh
@@ -318,14 +435,43 @@ commit:
 commit-force:
 	bash scripts/android-smart-commit.sh --force
 
+pr:
+	@if [ ! -f scripts/bitbucket-pr.sh ]; then \
+		echo "❌ 错误: 找不到 scripts/bitbucket-pr.sh 脚本文件"; \
+		echo ""; \
+		echo "📁 请将 bitbucket-pr.sh 脚本放置到项目根目录的 scripts/ 文件夹下:"; \
+		echo "   mkdir -p scripts"; \
+		echo "   cp /path/to/bitbucket-pr.sh scripts/"; \
+		echo "   chmod +x scripts/bitbucket-pr.sh"; \
+		echo ""; \
+		echo "💡 或者从以下位置获取脚本:"; \
+		echo "   https://github.com/tencent-international/specification/blob/main/commits/bitbucket-pr.sh"; \
+		echo ""; \
+		exit 1; \
+	else \
+		bash scripts/bitbucket-pr.sh; \
+	fi
+
 setup:
-	@echo "📋 请手动完成以下配置："
-	@echo "1. 将 gradle-config.${PROJECT_TYPE} 中的内容添加到对应的 Gradle 文件"
-	@echo "2. 运行 ./gradlew ktlintApplyToIdea 来配置 Android Studio"
-	@echo "3. 使用 'make lint' 运行 Android Lint 检查"
-	@echo "4. 使用 'make ktlint' 运行 Ktlint 检查"
-	@echo "5. 使用 'make format' 自动格式化 Kotlin 代码"
-EOF
+	@echo \"📋 配置说明：\"
+	@echo \"1. 将 gradle-lint-config.${DSL_TYPE} 中的内容添加到对应的 Gradle 文件\"
+	@echo \"2. 如需使用 Ktlint，取消注释配置文件中的 Ktlint 相关配置\"
+	@echo \"3. 运行 ./gradlew ktlintApplyToIdea 来配置 Android Studio（可选）\"
+	@echo \"4. 使用 'make lint' 运行 Android Lint 检查\"
+	@echo \"5. 使用 'make help' 查看所有可用命令\"
+	@echo \"\"
+	@echo \"📁 生成的文件：\"
+	@echo \"   - lint.xml: Android Lint 规则配置\"
+	@echo \"   - .editorconfig: 代码风格配置\"
+	@echo \"   - gradle-lint-config.${DSL_TYPE}: Gradle 配置示例\"
+	@echo \"   - scripts/android-smart-commit.sh: 智能提交脚本\"
+	@echo \"\"
+	@echo \"🔧 项目信息：\"
+	@echo \"   - DSL类型: ${DSL_TYPE}\"
+	@echo \"   - 模块类型: ${MODULE_TYPE}\"
+	@echo \"   - 项目根目录: ${PROJECT_ROOT}\""
+
+safe_create_file "Makefile" "$MAKEFILE_CONTENT"
 
 # 生成 Android 智能提交脚本
 cat <<'EOF' > scripts/android-smart-commit.sh
@@ -353,9 +499,9 @@ fi
 echo ""
 echo "✨ Step 1: Ktlint 格式化"
 if [ -f "gradlew" ]; then
-  # 询问是否需要格式化
-  read -p "🤔 是否运行 Ktlint 自动格式化？(Y/n): " FORMAT_CONFIRM
-  FORMAT_CONFIRM=${FORMAT_CONFIRM:-y}
+  # 询问是否需要格式化 - 默认为否
+  read -p "🤔 是否运行 Ktlint 自动格式化？(y/N): " FORMAT_CONFIRM
+  FORMAT_CONFIRM=${FORMAT_CONFIRM:-n}
   
   if [[ "$FORMAT_CONFIRM" =~ ^[Yy]$ ]]; then
     echo "🔧 正在运行 Ktlint 格式化..."
@@ -383,9 +529,9 @@ if [ -f "gradlew" ]; then
   else
     echo "⛔ Ktlint 检查失败"
     if [ "$FORCE_MODE" = false ]; then
-      read -p "🤔 是否继续提交？(y/N): " CONTINUE_CONFIRM
-      CONTINUE_CONFIRM=${CONTINUE_CONFIRM:-n}
-      if [[ ! "$CONTINUE_CONFIRM" =~ ^[Yy]$ ]]; then
+      read -p "🤔 是否继续提交？(Y/n): " CONTINUE_CONFIRM
+      CONTINUE_CONFIRM=${CONTINUE_CONFIRM:-y}
+      if [[ "$CONTINUE_CONFIRM" =~ ^[Nn]$ ]]; then
         echo "❌ 已取消提交"
         exit 1
       fi
@@ -406,9 +552,9 @@ if [ -f "gradlew" ]; then
     echo "⛔ Android Lint 检查失败"
     echo "📋 查看详细报告: build/reports/lint/lint-results.html"
     if [ "$FORCE_MODE" = false ]; then
-      read -p "🤔 是否继续提交？(y/N): " CONTINUE_CONFIRM
-      CONTINUE_CONFIRM=${CONTINUE_CONFIRM:-n}
-      if [[ ! "$CONTINUE_CONFIRM" =~ ^[Yy]$ ]]; then
+      read -p "🤔 是否继续提交？(Y/n): " CONTINUE_CONFIRM
+      CONTINUE_CONFIRM=${CONTINUE_CONFIRM:-y}
+      if [[ "$CONTINUE_CONFIRM" =~ ^[Nn]$ ]]; then
         echo "❌ 已取消提交"
         exit 1
       fi
@@ -475,7 +621,7 @@ echo "✅ Android Lint/Ktlint 脚本与配置初始化完成！"
 echo "   - lint.xml (Android Lint 规则配置)"
 echo "   - .editorconfig (Ktlint 代码风格配置)"
 echo "   - .gitignore (如果不存在)"
-echo "   - gradle-config.${PROJECT_TYPE} (Gradle 配置示例)"
+echo "   - gradle-lint-config.${DSL_TYPE} (Gradle 配置示例)"
 echo "   - scripts/android-smart-commit.sh (智能提交脚本)"
 echo "   - Makefile (快捷命令)"
 if [ -d "app/src/main/java" ]; then
@@ -484,7 +630,7 @@ fi
 echo ""
 echo "🎯 下一步配置："
 echo "   1. 运行 'make setup' 查看配置说明"
-echo "   2. 将 gradle-config 中的内容添加到对应的 Gradle 文件"
+echo "   2. 将 gradle-lint-config 中的内容添加到对应的 Gradle 文件"
 echo "   3. 运行 'make lint' 检查 Android Lint"
 echo "   4. 运行 'make ktlint' 检查 Kotlin 代码风格"
 echo "   5. 使用 'make commit' 进行智能提交"

@@ -13,7 +13,7 @@
 ## 二、快速开始
 
 ### 1. 初始化项目
-把 ts-lint-init.sh 和 common/gptcommit-init.sh 复制到项目的根目录下，按顺序执行：
+把 ts-lint-init.sh 和 commits/gptcommit-init.sh 复制到项目的根目录下，按顺序执行：
 ```bash
 bash gptcommit-init.sh
 bash ts-lint-init.sh

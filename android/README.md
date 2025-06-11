@@ -14,7 +14,7 @@
 ### 1. 初始化项目
 #### 在Android项目根目录下执行
 ```bash
-# 复制 android-lint-init.sh 和 common/gptcommit-init.sh 到项目根目录
+# 复制 android-lint-init.sh 和 commits/gptcommit-init.sh 到项目根目录
 bash gptcommit-init.sh
 bash android-lint-init.sh
 ```
