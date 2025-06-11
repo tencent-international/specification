@@ -33,12 +33,14 @@
 
 ### 使用方法
 
+这里注意建议把脚本放置根目录的 scripts 文件夹
 ```bash
 # 在 Git 仓库根目录下运行
-bash commits/gptcommit-init.sh
+bash scripts/gptcommit-init.sh
 ```
 
-### 提交信息格式
+## 该脚本有两个功能
+### 1.验证提交信息格式
 
 ```
 <type>(<scope>): <description>
@@ -62,6 +64,14 @@ git commit -m "添加新功能"
 git commit -m "修复bug"
 git commit -m "update docs"
 ```
+
+### 2.使用OpenAI智能分析生成提交内容
+```bash
+# 进入编辑器生成提交信息
+git commit
+# 不进入编辑器，直接生成提交信息
+git commit --quiet --no-edit
+````
 
 ### 安装效果
 
@@ -93,8 +103,9 @@ git commit -m "update docs"
 
 第一次运行时会自动引导您完成配置：
 
+这里注意需要把脚本放置根目录的 scripts 文件夹
 ```bash
-bash commits/bitbucket-pr.sh
+bash scripts/bitbucket-pr.sh
 ```
 
 脚本会提示输入：
@@ -109,25 +120,25 @@ bash commits/bitbucket-pr.sh
 
 ```bash
 # 最简单的用法 - 使用默认设置
-bash commits/bitbucket-pr.sh
+bash scripts/bitbucket-pr.sh
 
 # 查看帮助信息
-bash commits/bitbucket-pr.sh --help
+bash scripts/bitbucket-pr.sh --help
 ```
 
 #### 高级用法
 
 ```bash
 # 自定义 PR 标题和描述
-bash commits/bitbucket-pr.sh \
+bash scripts/bitbucket-pr.sh \
   --title "feat: 添加新的用户管理功能" \
   --desc "实现了用户创建、删除和权限管理功能"
 
 # 指定目标分支
-bash commits/bitbucket-pr.sh --target main
+bash scripts/bitbucket-pr.sh --target main
 
 # 组合使用
-bash commits/bitbucket-pr.sh \
+bash scripts/bitbucket-pr.sh \
   --title "fix: 修复登录问题" \
   --desc "修复了用户在某些情况下无法登录的bug" \
   --target develop
@@ -137,7 +148,7 @@ bash commits/bitbucket-pr.sh \
 
 ```bash
 # 重新配置或管理现有配置
-bash commits/bitbucket-pr.sh --config
+bash scripts/bitbucket-pr.sh --config
 ```
 
 ### 完整参数列表
@@ -229,17 +240,17 @@ git@bitbucket.org:workspace/repo.git
 .PHONY: init-hooks pr
 
 init-hooks:
-	bash commits/gptcommit-init.sh
+	bash scripts/gptcommit-init.sh
 
 pr:
-	bash commits/bitbucket-pr.sh
+	bash scripts/bitbucket-pr.sh
 ```
 
 ```json
 {
   "scripts": {
-    "init-hooks": "bash commits/gptcommit-init.sh",
-    "pr": "bash commits/bitbucket-pr.sh"
+    "init-hooks": "bash scripts/gptcommit-init.sh",
+    "pr": "bash scripts/bitbucket-pr.sh"
   }
 }
 ```
