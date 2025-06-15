@@ -102,6 +102,150 @@ cat <<'EOF' > scripts/smart-commit.sh
 #!/usr/bin/env bash
 set -e
 
+# 检查并处理 Submodule 改动的函数
+handle_submodules() {
+  echo "🔍 检查 Submodule 状态..."
+
+  # 获取所有 submodule 的状态
+  local submodule_status=$(git submodule status 2>/dev/null || echo "")
+
+  if [ -z "$submodule_status" ]; then
+    echo "📝 未检测到 submodule"
+    return 0
+  fi
+
+  echo "📦 发现以下 submodule:"
+  git submodule status | while read line; do
+    echo "  $line"
+  done
+
+  # 检查每个 submodule 是否有未提交的改动
+  local has_submodule_changes=false
+
+  git submodule foreach --quiet 'if [ -n "$(git status --porcelain)" ]; then echo "📝 Submodule $name 有未提交的改动:"; git status --short | sed "s/^/    /"; echo ""; fi' | tee /tmp/submodule_changes.txt
+
+  if [ -s /tmp/submodule_changes.txt ]; then
+    has_submodule_changes=true
+    echo "⚠️  发现 submodule 中有未提交的改动"
+    cat /tmp/submodule_changes.txt
+
+    read -p "🔄 是否处理 submodule 中的改动？(Y/n, 默认 Y): " HANDLE_SUBMODULES
+    HANDLE_SUBMODULES=${HANDLE_SUBMODULES:-y}
+
+    if [[ "$HANDLE_SUBMODULES" =~ ^[Yy]$ ]]; then
+      echo "🚀 开始处理 submodule 改动..."
+
+      # 获取所有 submodule 路径
+      git submodule status | while read -r status hash path branch; do
+        # 去掉状态字符（+ - U等）
+        path=$(echo "$path" | sed 's/^[+U -]*//')
+
+        if [ -d "$path" ] && [ -n "$(cd "$path" && git status --porcelain 2>/dev/null)" ]; then
+          echo ""
+          echo "🔧 处理 submodule: $(basename "$path")"
+          echo "  路径: $path"
+
+          # 进入 submodule 目录
+          cd "$path"
+
+          # 显示改动文件
+          echo "  📝 改动文件:"
+          git status --short | sed 's/^/       /'
+          echo ""
+
+          # 格式化 Go 代码（如果需要）
+          if [[ "$FORMAT_CONFIRM" =~ ^[Yy]$ ]]; then
+            if command -v gofmt >/dev/null 2>&1; then
+              echo "  🎨 格式化 Go 代码..."
+              gofmt -s -w . 2>/dev/null || true
+              if command -v goimports >/dev/null 2>&1; then
+                goimports -w . 2>/dev/null || true
+              fi
+            fi
+          fi
+
+          # 添加所有改动
+          git add .
+
+          # 尝试使用 gptcommit 提交
+          local commit_success=false
+          if command -v gptcommit >/dev/null 2>&1; then
+            echo "  🤖 尝试使用 GPTCommit 生成提交信息..."
+            if git commit --quiet --no-edit 2>/dev/null; then
+              echo "  ✅ GPTCommit 提交成功"
+              commit_success=true
+            else
+              echo "  ❌ GPTCommit 失败 (可能是配置问题或空提交信息)"
+            fi
+          else
+            echo "  📝 GPTCommit 未安装"
+          fi
+
+          # 如果 GPTCommit 失败，询问用户
+          if [ "$commit_success" = false ]; then
+            echo ""
+            echo "  请选择处理方式："
+            echo "    1. 手动输入提交信息"
+            echo "    2. 使用默认提交信息 (chore: update submodule $(basename "$path"))"
+            echo "    3. 跳过此 submodule"
+            read -p "  请选择 [1/2/3]: " choice
+
+            case "$choice" in
+              1)
+                read -p "  💬 请输入提交信息: " COMMIT_MSG
+                if [ -n "$COMMIT_MSG" ]; then
+                  git commit -m "$COMMIT_MSG" --quiet
+                  echo "  ✅ 使用自定义提交信息提交完成"
+                else
+                  echo "  ❌ 提交信息不能为空，跳过此 submodule"
+                fi
+                ;;
+              2)
+                git commit -m "chore: update submodule $(basename "$path")" --quiet
+                echo "  ✅ 使用默认提交信息提交完成"
+                ;;
+              3)
+                git reset HEAD . --quiet
+                echo "  ⚠️  已跳过此 submodule，改动已取消暂存"
+                ;;
+              *)
+                echo "  ❌ 无效选择，跳过此 submodule"
+                git reset HEAD . --quiet
+                ;;
+            esac
+          fi
+
+          # 返回主项目目录
+          cd - >/dev/null
+
+          echo "  ✅ Submodule $(basename "$path") 处理完成"
+        fi
+      done
+    else
+      echo "⚠️  跳过处理 submodule 改动"
+    fi
+  else
+    echo "✅ 所有 submodule 都是干净的"
+  fi
+
+  # 清理临时文件
+  rm -f /tmp/submodule_changes.txt
+
+  # 检查主项目是否需要更新 submodule 引用
+  if git diff --quiet --cached --submodule=short; then
+    echo "📝 主项目中的 submodule 引用无需更新"
+  else
+    echo "🔄 检测到 submodule 引用需要更新，将包含在主项目提交中"
+  fi
+}
+
+# 主程序开始
+echo "🚀 智能提交脚本启动..."
+
+# Step 0: 处理 Submodule 改动
+handle_submodules
+
+echo ""
 read -p "✨ 是否需要格式化 Go 代码？(y/N, 默认 N): " FORMAT_CONFIRM
 FORMAT_CONFIRM=${FORMAT_CONFIRM:-n}
 if [[ "$FORMAT_CONFIRM" =~ ^[Yy]$ ]]; then
@@ -153,10 +297,21 @@ else
 fi
 
 echo ""
-echo "🤖 Step 3: 调用 GPTCommit 生成提交信息并提交..."
-git commit --quiet --no-edit
+echo "🤖 Step 3: 调用 GPTCommit 生成提交信息并提交主项目..."
+
+# 检查是否有需要提交的改动
+if git diff --cached --quiet; then
+  echo "📝 主项目没有需要提交的改动"
+else
+  git commit --quiet --no-edit
+  echo "✅ 主项目提交完成"
+fi
+
 echo ""
-echo "🎉 提交完成！"
+echo "🎉 所有提交完成！"
+echo "📊 提交摘要："
+echo "  - Submodule 改动已处理"
+echo "  - 主项目改动已提交"
 EOF
 
 chmod +x scripts/smart-commit.sh
