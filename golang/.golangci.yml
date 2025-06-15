@@ -1,0 +1,15 @@
+run:
+  timeout: 2m
+  modules-download-mode: readonly
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+
+issues:
+  exclude-use-default: false
