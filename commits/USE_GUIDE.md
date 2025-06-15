@@ -33,10 +33,9 @@
 
 ### 使用方法
 
-这里注意建议把脚本放置根目录的 scripts 文件夹
+### 初始化 gptcommit
 ```bash
-# 在 Git 仓库根目录下运行
-bash scripts/gptcommit-init.sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/gptcommit-init.sh)"
 ```
 
 ## 该脚本有两个功能
