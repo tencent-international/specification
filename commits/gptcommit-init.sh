@@ -1,6 +1,58 @@
 #!/usr/bin/env bash
 set -e
 
+# 获取 Git 钩子目录
+get_git_hooks_dir() {
+  local git_type="$1"
+  
+  if [ "$git_type" = "normal" ]; then
+    echo ".git/hooks"
+  elif [ "$git_type" = "submodule" ]; then
+    # 从 .git 文件中读取实际的 git 目录路径
+    local git_dir=$(cat .git | sed 's/gitdir: //')
+    # 如果路径是相对路径，转换为绝对路径
+    if [[ "$git_dir" != /* ]]; then
+      git_dir="$(pwd)/$git_dir"
+    fi
+    echo "$git_dir/hooks"
+  else
+    echo "❌ 错误：无法确定 Git 项目类型"
+    exit 1
+  fi
+}
+
+# 检查是否是 Git 项目
+if [ ! -e ".git" ]; then
+  echo "❌ 错误：当前目录不是 Git 项目"
+  exit 1
+fi
+
+# 让用户选择模式
+echo "请选择项目类型："
+echo "1. 普通 Git 项目模式"
+echo "2. Git Submodule 项目模式"
+read -p "请输入选择 [1/2]: " MODE_CHOICE
+
+case "$MODE_CHOICE" in
+  1)
+    GIT_TYPE="normal"
+    echo "✅ 使用普通 Git 项目模式"
+    ;;
+  2)
+    GIT_TYPE="submodule"
+    echo "✅ 使用 Git Submodule 项目模式"
+    ;;
+  *)
+    echo "❌ 无效选择，请重新运行脚本"
+    exit 1
+    ;;
+esac
+
+# 获取钩子目录
+HOOKS_DIR=$(get_git_hooks_dir "$GIT_TYPE")
+echo "📁 Git 钩子目录: $HOOKS_DIR"
+echo ""
+
 # 选择语言
 read -p "请选择 GPTCommit 输出语言 [cn/en，默认 cn]: " LANG_CHOICE
 LANG=${LANG_CHOICE:-cn}
@@ -34,14 +86,28 @@ gptcommit config set openai.model gpt-3.5-turbo
 gptcommit install
 
 # 生成 commit-msg 钩子（Conventional Commit 校验）
-mkdir -p .git/hooks
-cat <<'EOF' > .git/hooks/commit-msg
+echo "📝 创建 commit-msg 钩子..."
+mkdir -p "$HOOKS_DIR"
+cat <<'EOF' > "$HOOKS_DIR/commit-msg"
 #!/usr/bin/env sh
 set -e
 MSGFILE="$1"
 
-# 检查是否是重试标记文件
-RETRY_FLAG_FILE=".git/gptcommit_retry_flag"
+# 根据项目类型确定重试标记文件位置
+if [ -d ".git" ]; then
+  # 普通 Git 项目
+  RETRY_FLAG_FILE=".git/gptcommit_retry_flag"
+elif [ -f ".git" ]; then
+  # Git Submodule 项目
+  GIT_DIR=$(cat .git | sed 's/gitdir: //')
+  # 如果路径是相对路径，转换为绝对路径
+  if [[ "$GIT_DIR" != /* ]]; then
+    GIT_DIR="$(pwd)/$GIT_DIR"
+  fi
+  RETRY_FLAG_FILE="$GIT_DIR/gptcommit_retry_flag"
+else
+  RETRY_FLAG_FILE="./gptcommit_retry_flag"
+fi
 
 # 简单有效的清理函数
 clean_markdown() {
@@ -150,10 +216,12 @@ rm -f "$RETRY_FLAG_FILE"
 echo "✅ Commit message cleaned and validated"
 echo "   第一行: $FIRST_LINE"
 EOF
-chmod +x .git/hooks/commit-msg
+chmod +x "$HOOKS_DIR/commit-msg"
 
 echo ""
 echo "✅ GPTCommit 初始化完成！"
+echo "   - 项目类型: $GIT_TYPE"
+echo "   - 钩子目录: $HOOKS_DIR"
 echo "   - GPTCommit 已配置"
 echo "   - Conventional Commit 格式校验钩子已安装"
 echo "   - 增加自动重试机制：格式错误时自动重试一次"
