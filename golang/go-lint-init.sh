@@ -136,9 +136,9 @@ handle_submodules() {
       echo "🚀 开始处理 submodule 改动..."
 
       # 获取所有 submodule 路径
-      git submodule status | while read -r status hash path branch; do
-        # 去掉状态字符（+ - U等）
-        path=$(echo "$path" | sed 's/^[+U -]*//')
+      git submodule status | while read -r line; do
+        # 从输出中提取路径 (格式: " <hash> <path> (<branch>)")
+        path=$(echo "$line" | awk '{print $2}')
 
         if [ -d "$path" ] && [ -n "$(cd "$path" && git status --porcelain 2>/dev/null)" ]; then
           echo ""
@@ -171,48 +171,45 @@ handle_submodules() {
           local commit_success=false
           if command -v gptcommit >/dev/null 2>&1; then
             echo "  🤖 尝试使用 GPTCommit 生成提交信息..."
+
+            # 检查是否已安装 GPTCommit 钩子
+            local git_hooks_dir="../.git/modules/$(basename "$path")/hooks"
+            if [ ! -f "$git_hooks_dir/prepare-commit-msg" ]; then
+              echo "  🔧 临时配置 GPTCommit..."
+              
+              # 临时为 submodule 配置 gptcommit（如果主项目有配置）
+              local main_api_key=$(cd .. && gptcommit config get openai.api_key 2>/dev/null || echo "")
+              if [ -n "$main_api_key" ]; then
+                gptcommit config set openai.api_key "$main_api_key" >/dev/null 2>&1 || true
+                gptcommit config set output.format conventional >/dev/null 2>&1 || true
+                gptcommit config set output.lang zh-cn >/dev/null 2>&1 || true
+                gptcommit config set openai.model gpt-3.5-turbo >/dev/null 2>&1 || true
+                gptcommit config set openai.temperature 0.2 >/dev/null 2>&1 || true
+                
+                # 临时安装 GPTCommit 钩子
+                gptcommit install >/dev/null 2>&1 || true
+                echo "    - 临时安装 GPTCommit 钩子"
+              else
+                echo "    - ⚠️  主项目中未找到 GPTCommit 配置"
+              fi
+            fi
+
+            # 使用 git commit 触发 GPTCommit 钩子
             if git commit --quiet --no-edit 2>/dev/null; then
-              echo "  ✅ GPTCommit 提交成功"
+              local commit_msg=$(git log -1 --pretty=format:"%s")
+              echo "  ✅ GPTCommit 提交成功: $commit_msg"
               commit_success=true
             else
-              echo "  ❌ GPTCommit 失败 (可能是配置问题或空提交信息)"
+              echo "  ❌ GPTCommit 失败，使用默认提交信息"
+              git commit -m "chore: update submodule $(basename "$path")" --quiet
+              echo "  ✅ 使用默认提交信息提交完成"
+              commit_success=true
             fi
           else
-            echo "  📝 GPTCommit 未安装"
-          fi
-
-          # 如果 GPTCommit 失败，询问用户
-          if [ "$commit_success" = false ]; then
-            echo ""
-            echo "  请选择处理方式："
-            echo "    1. 手动输入提交信息"
-            echo "    2. 使用默认提交信息 (chore: update submodule $(basename "$path"))"
-            echo "    3. 跳过此 submodule"
-            read -p "  请选择 [1/2/3]: " choice
-
-            case "$choice" in
-              1)
-                read -p "  💬 请输入提交信息: " COMMIT_MSG
-                if [ -n "$COMMIT_MSG" ]; then
-                  git commit -m "$COMMIT_MSG" --quiet
-                  echo "  ✅ 使用自定义提交信息提交完成"
-                else
-                  echo "  ❌ 提交信息不能为空，跳过此 submodule"
-                fi
-                ;;
-              2)
-                git commit -m "chore: update submodule $(basename "$path")" --quiet
-                echo "  ✅ 使用默认提交信息提交完成"
-                ;;
-              3)
-                git reset HEAD . --quiet
-                echo "  ⚠️  已跳过此 submodule，改动已取消暂存"
-                ;;
-              *)
-                echo "  ❌ 无效选择，跳过此 submodule"
-                git reset HEAD . --quiet
-                ;;
-            esac
+            echo "  📝 GPTCommit 未安装，使用默认提交信息"
+            git commit -m "chore: update submodule $(basename "$path")" --quiet
+            echo "  ✅ 使用默认提交信息提交完成"
+            commit_success=true
           fi
 
           # 返回主项目目录
@@ -316,16 +313,103 @@ EOF
 
 chmod +x scripts/smart-commit.sh
 
+# 生成 submodule GPTCommit 配置脚本
+cat <<'EOF' > scripts/setup-submodule-gptcommit.sh
+#!/usr/bin/env bash
+set -e
+
+echo "🔧 配置 Submodule GPTCommit..."
+
+# 检查是否有 submodule
+if [ -z "$(git submodule status 2>/dev/null)" ]; then
+  echo "📝 未检测到 submodule"
+  exit 0
+fi
+
+# 检查主项目 GPTCommit 配置
+echo "🔍 检查主项目 GPTCommit 配置..."
+if ! command -v gptcommit >/dev/null 2>&1; then
+  echo "❌ GPTCommit 未安装，请先运行 gptcommit-init.sh"
+  exit 1
+fi
+
+main_api_key=$(gptcommit config get openai.api_key 2>/dev/null || echo "")
+if [ -z "$main_api_key" ]; then
+  echo "❌ 主项目中未找到 GPTCommit API Key，请先配置主项目"
+  exit 1
+fi
+
+echo "✅ 主项目 GPTCommit 配置正常"
+
+# 为每个 submodule 配置 GPTCommit
+git submodule status | while read -r line; do
+  path=$(echo "$line" | awk '{print $2}')
+  
+  if [ -d "$path" ]; then
+    echo ""
+    echo "🔧 配置 submodule: $(basename "$path")"
+    echo "  路径: $path"
+    
+    # 进入 submodule 目录
+    cd "$path"
+    
+    # 配置 GPTCommit
+    echo "  🔑 配置 GPTCommit..."
+    gptcommit config set openai.api_key "$main_api_key"
+    gptcommit config set output.format conventional
+    gptcommit config set output.lang zh-cn
+    gptcommit config set openai.model gpt-3.5-turbo
+    gptcommit config set openai.temperature 0.2
+    
+    # 安装 GPTCommit 钩子
+    echo "  🔗 安装 GPTCommit 钩子..."
+    gptcommit install
+    
+    echo "  ✅ Submodule $(basename "$path") GPTCommit 配置完成"
+    
+    # 返回主项目目录
+    cd - >/dev/null
+  fi
+done
+
+echo ""
+echo "🎉 所有 Submodule GPTCommit 配置完成！"
+echo ""
+echo "💡 使用方法："
+echo "   - 运行 'make commit' 现在可自动处理 submodule 改动"
+echo "   - 新增 submodule 时，运行 'bash scripts/setup-submodule-gptcommit.sh' 重新配置"
+EOF
+
+chmod +x scripts/setup-submodule-gptcommit.sh
+
+# 询问是否立即配置现有的 submodule
+if [ -n "$(git submodule status 2>/dev/null)" ]; then
+  echo ""
+  echo "🔍 检测到现有的 submodule"
+  read -p "🔧 是否立即为现有 submodule 配置 GPTCommit？(Y/n, 默认 Y): " SETUP_SUBMODULES
+  SETUP_SUBMODULES=${SETUP_SUBMODULES:-y}
+  
+  if [[ "$SETUP_SUBMODULES" =~ ^[Yy]$ ]]; then
+    echo "🚀 开始配置 submodule GPTCommit..."
+    bash scripts/setup-submodule-gptcommit.sh
+  else
+    echo "⚠️  跳过 submodule GPTCommit 配置"
+    echo "💡 稍后可运行 'bash scripts/setup-submodule-gptcommit.sh' 手动配置"
+  fi
+fi
+
 echo ""
 echo "✅ Go Lint/格式化脚本与配置初始化完成！"
 echo "   - .editorconfig"
 echo "   - .golangci.yml (v1 格式兼容)"
 echo "   - scripts/smart-commit.sh"
+echo "   - scripts/setup-submodule-gptcommit.sh (新增)"
 echo "   - Makefile"
 echo ""
 echo "📝 注意："
 echo "   - 使用 go install 安装 golangci-lint 而非 brew"
 echo "   - 已自动配置 PATH 环境变量"
 echo "   - 生成的 .golangci.yml 采用 v1 格式兼容"
+echo "   - Submodule GPTCommit 已配置（如果存在）"
 echo "   - 建议重启终端或运行 'source ~/.zshrc' 来应用 PATH 更改"
 echo ""
