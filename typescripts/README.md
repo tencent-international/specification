@@ -1,4 +1,4 @@
-# 🔍 TypeScript Lint 检测工具
+# 🔍 TypeScript 代码规范工具配置
 
 ## 快速开始
 

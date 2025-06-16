@@ -1,7 +1,8 @@
-只需将本目录下的 .golangci.yml 和 .editorconfig 复制到项目根目录。
+# 🔍 Golang 代码规范工具配置
 
-.golangci.yml：Go 代码检查配置。
-.editorconfig：Go 统一代码格式。
+### 复制以下文件至项目根目录
+- `.editorconfig` - Go 统一代码格式
+- `.golangci.yml` - Go 代码检查配置
 
 ### 安装 golangci-lint
 ```shell
