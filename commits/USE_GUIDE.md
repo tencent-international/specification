@@ -4,9 +4,10 @@
 
 ## 📋 脚本概览
 
-| 脚本 | 功能 | 用途 |
-|------|------|------|
-| `gptcommit-init.sh` | Git Commit 验证 | 规范化提交信息格式 |
+| 脚本 | 功能 | 用途            |
+|------|------|---------------|
+| `commit-msg-init.sh` | Git Commit 验证 | 规范化提交信息格式     |
+| `gptcommit-init.sh` | Git Commit 验证 | AI智能提交信息          |
 | `bitbucket-pr.sh` | PR 自动化 | 自动创建、批准和合并 PR |
 
 ---
@@ -33,8 +34,11 @@
 
 ### 使用方法
 
-### 初始化 gptcommit
+### 初始化 gptcommit 或普通的 commit hooks 二选一
 ```bash
+# commit-msg-init.sh - 使用 Conventional Commits 验证提交信息格式
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/commit-msg-init.sh)"
+# gptcommit-init.sh - 使用 OpenAI 智能分析生成提交内容
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/gptcommit-init.sh)"
 ```
 
