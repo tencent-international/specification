@@ -4,20 +4,22 @@
 
 | 脚本                | 功能                                   |
 |---------------------|----------------------------------------|
-| commit-msg-init.sh  | 规范化 Git 提交信息（Conventional Commits） |
+| normal-commit-init.sh  | 规范化 Git 提交信息（Conventional Commits） |
 | gptcommit-init.sh   | AI 智能生成/校验提交信息               |
 | bitbucket-pr.sh     | Bitbucket PR 自动化（创建、批准、合并） |
 
 ---
 
-## gptcommit-init.sh / commit-msg-init.sh
+## gptcommit-init.sh / normal-commit-init.sh
 
 - 作用：强制/智能生成符合 Conventional Commits 规范的提交信息
 - 支持类型：feat, fix, docs, style, refactor, perf, test, chore, ci, build, revert
 - 安装：
   ```bash
   # 任选其一
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/commit-msg-init.sh)"
+  # normal-commit-init.sh
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/normal-commit-init.sh)"
+  # gptcommit-init.sh
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/gptcommit-init.sh)"
   ```
 - 格式示例：
