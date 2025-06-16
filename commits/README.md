@@ -22,12 +22,18 @@
   # gptcommit-init.sh
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/gptcommit-init.sh)"
   ```
-- 格式示例：
+- 生成格式示例：
   ```
   feat: 新增用户登录
   fix(auth): 修复登录验证
   ```
-- 禁用：删除 .git/hooks/commit-msg
+- 使用方式
+    ```bash
+    # 可以查看生成内容
+    git commit -a
+    # 不查看生成内容直接提交
+    git commit -a --quiet --no-edit
+    ```
 
 ---
 
