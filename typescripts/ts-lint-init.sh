@@ -41,11 +41,10 @@ else
   echo "   ✅ @typescript-eslint/parser 已安装"
 fi
 
-if ! check_package "eslint"; then
-  echo "   ❌ eslint 未安装"
-  REQUIRED_PACKAGES+=("eslint")
-else
+if [ -d "node_modules/eslint" ]; then
   echo "   ✅ eslint 已安装"
+else
+  echo "   ❌ eslint 未安装"
 fi
 
 # 安装缺少的依赖
@@ -63,7 +62,7 @@ if [ ! -f "tsconfig.json" ]; then
 fi
 
 # 生成基本的 eslint.config.js (如果不存在)
-if [ ! -f "eslint.config.js" ]; then
+if [ ! -f "eslint.config.mjs" ]; then
   echo "📝 创建 eslint.config.js..."
   exit 1
 fi
@@ -84,7 +83,6 @@ echo "   - ts-lint.sh (检测脚本)"
 echo "   - package.json scripts (lint 相关命令)"
 echo ""
 echo "🚀 使用方法:"
-echo "   bash scripts/ts-lint.sh     # 运行完整检测"
 echo "   npm run lint                # 只运行 ESLint"
 echo "   npm run lint:fix            # 自动修复 ESLint 问题"
 echo "   npm run type-check          # 只运行类型检查"
