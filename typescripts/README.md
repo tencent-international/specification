@@ -4,7 +4,7 @@
 
 ## 复制以下文件至项目根目录
 - `.editorconfig` - 代码格式化配置
-- `eslint.config.js` - ESLint 配置(如果你有了就不需要)
+- `eslint.config.mjs` - ESLint 配置(如果你有了就不需要)
 - `tsconfig.json` - TypeScript 配置(如果你有了就不需要)
 
 ```bash
