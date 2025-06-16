@@ -63,7 +63,7 @@ fi
 
 # 生成基本的 eslint.config.js (如果不存在)
 if [ ! -f "eslint.config.mjs" ]; then
-  echo "📝 创建 eslint.config.js..."
+  echo "请创建 eslint.config.mjs..."
   exit 1
 fi
 
