@@ -2,23 +2,16 @@
 
 ## 快速开始
 
+## 复制以下文件至项目根目录
+- `.editorconfig` - 代码格式化配置
+- `eslint.config.js` - ESLint 配置
+- `ts-lint.sh` - 检测脚本
+- `tsconfig.json` - TypeScript 配置
 
-### 初始化项目
-### 目录中的文件会被复制到你的项目根目录
-### - .editorconfig
-### - eslint.config.js
-### - ts-lint.sh
-### - tsconfig.json
 ```bash
 # 运行初始化脚本
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/typescripts/ts-lint-init.sh)"
 ```
-
-## 生成文件
-- `tsconfig.json` - TypeScript 配置
-- `eslint.config.js` - ESLint 配置  
-- `scripts/ts-lint.sh` - 检测脚本
-- `package.json` - 添加 npm scripts
 
 ## 使用方法
 

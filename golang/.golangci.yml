@@ -2,7 +2,6 @@ run:
   timeout: 2m
   modules-download-mode: readonly
 
-# 如果觉得检测太严格,可以只保留 misspell
 linters:
   disable-all: true
   enable:
