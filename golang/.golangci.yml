@@ -2,14 +2,16 @@ run:
   timeout: 2m
   modules-download-mode: readonly
 
+# 如果觉得检测太严格,可以只保留 misspell
 linters:
   disable-all: true
   enable:
-    - errcheck
-    - govet
-    - ineffassign
-    - misspell
-    - staticcheck
+    - errcheck     # 检查未处理的错误，防止遗漏 error 导致 bug
+    - govet        # Go 官方的代码检查工具，发现可疑代码和潜在问题
+    - ineffassign  # 检查赋值后未被使用的变量，避免无效代码
+    - misspell     # 检查拼写错误，特别是英文单词
+    - staticcheck  # 强大的静态分析工具，发现各种常见 bug 和代码异味
+
 
 issues:
   exclude-use-default: false

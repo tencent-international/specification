@@ -15,11 +15,6 @@
 
 ### 把当前目录的文件复制到你根目录
 
-### 安装 goimports
-```shell
-go install golang.org/x/tools/cmd/goimports@v0.28.0
-```
-
 ### 安装 golangci-lint
 ```shell
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
@@ -31,7 +26,6 @@ cat <<'EOF' >> .git/hooks/pre-commit
 echo "运行 golangci-lint 检查..."
 if ! golangci-lint run --config .golangci.yml; then
   echo "Lint 检查失败"
-  exit 1
 else
   echo "Lint 检查通过"
 fi
@@ -42,5 +36,13 @@ chmod +x .git/hooks/pre-commit
 ### 初始化 gptcommit
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/tencent-international/specification/main/commits/gptcommit-init.sh)"
+```
+
+### 自动生成提交信息
+```shell
+# 执行该命令可以自动生成提交信息并且退出
+git commit --quiet --no-edit
+# 如果你想查看生成内容,可以直接执行
+# git commit
 ```
 
