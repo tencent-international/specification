@@ -11,12 +11,19 @@ fi
 
 # 定义必要依赖
 PACKAGES=(
-  "typescript"
-  "@typescript-eslint/eslint-plugin"
-  "@typescript-eslint/parser"
-  "eslint"
-  "eslint-plugin-react"
-  "eslint-plugin-react-hooks"
+  "typescript@^5.4.5"
+  "@typescript-eslint/eslint-plugin@^8.34.1"
+  "@typescript-eslint/parser@^8.34.1"
+  "eslint@^9.29.0"
+  "@eslint/compat@^1.3.0"
+  "@eslint/eslintrc@^3.3.1"
+  "@eslint/js@^9.29.0"
+  "eslint-plugin-prettier@^5.4.1"
+  "@react-native/eslint-config@^0.78.2"
+  "eslint-config-prettier@^10.1.5"
+  "eslint-plugin-react-native@^5.0.0"
+  "eslint-plugin-jest@^28.14.0"
+  "eslint-plugin-ft-flow@^3.0.11"
 )
 
 echo "📦 安装依赖中..."
