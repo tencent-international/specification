@@ -1,114 +1,81 @@
 #!/usr/bin/env bash
 set -e
 
-echo "🔍 简化版 TypeScript Lint 检测脚本"
-echo "=================================================="
+echo "🚀 TypeScript Lint 快速初始化"
+echo "================================"
 
 if [ ! -f "package.json" ]; then
-  echo " 请初始化 package.json..."
+  echo "❌ 请先初始化 package.json"
   exit 1
 fi
 
-check_package() {
-  npm list "$1" >/dev/null 2>&1
-}
+# 定义必要依赖
+PACKAGES=(
+  "typescript@^5.4.5"
+  "@typescript-eslint/eslint-plugin@^8.34.1"
+  "@typescript-eslint/parser@^8.34.1"
+  "eslint@^9.29.0"
+  "@eslint/compat@^1.3.0"
+  "@eslint/eslintrc@^3.3.1"
+  "@eslint/js@^9.29.0"
+  "eslint-plugin-prettier@^5.4.1"
+  "@react-native/eslint-config@^0.78.2"
+  "eslint-config-prettier@^10.1.5"
+  "eslint-plugin-react-native@^5.0.0"
+  "eslint-plugin-jest@^28.14.0"
+  "eslint-plugin-ft-flow@^3.0.11"
+)
 
-REQUIRED_PACKAGES=()
+echo "📦 安装依赖中..."
 
-echo "🔍 检查必要依赖..."
+SUCCEEDED=()
+FAILED=()
 
-if ! check_package "typescript"; then
-  echo "   ❌ typescript 未安装"
-  REQUIRED_PACKAGES+=("typescript")
-else
-  echo "   ✅ typescript 已安装"
-fi
-
-if ! check_package "@typescript-eslint/eslint-plugin"; then
-  echo "   ❌ @typescript-eslint/eslint-plugin 未安装"
-  REQUIRED_PACKAGES+=("@typescript-eslint/eslint-plugin")
-else
-  echo "   ✅ @typescript-eslint/eslint-plugin 已安装"
-fi
-
-if ! check_package "@typescript-eslint/parser"; then
-  echo "   ❌ @typescript-eslint/parser 未安装"
-  REQUIRED_PACKAGES+=("@typescript-eslint/parser")
-else
-  echo "   ✅ @typescript-eslint/parser 已安装"
-fi
-
-if [ -d "node_modules/eslint" ]; then
-  echo "   ✅ eslint 已安装"
-else
-  echo "   ❌ eslint 未安装"
-  REQUIRED_PACKAGES+=("eslint")
-fi
-
-# 检查 react/react-hooks 插件（如果你的 eslint config 里用到了）
-NEED_REACT_HOOKS=0
-if grep -q "react-hooks" eslint.config.* 2>/dev/null || grep -q "react-hooks" .eslintrc* 2>/dev/null; then
-  NEED_REACT_HOOKS=1
-fi
-
-if grep -q "eslint-plugin-react-hooks" package.json 2>/dev/null || [ $NEED_REACT_HOOKS -eq 1 ]; then
-  if ! check_package "eslint-plugin-react-hooks"; then
-    echo "   ❌ eslint-plugin-react-hooks 未安装"
-    REQUIRED_PACKAGES+=("eslint-plugin-react-hooks")
+# 尝试安装每个依赖
+for package in "${PACKAGES[@]}"; do
+  if npm install --save-dev "$package" >/dev/null 2>&1; then
+    SUCCEEDED+=("$package")
   else
-    echo "   ✅ eslint-plugin-react-hooks 已安装"
+    FAILED+=("$package")
   fi
-fi
+done
 
-# 检查 react plugin（如果你的 eslint config 里用到了）
-NEED_REACT=0
-if grep -q "react" eslint.config.* 2>/dev/null || grep -q "react" .eslintrc* 2>/dev/null; then
-  NEED_REACT=1
-fi
-
-if grep -q "eslint-plugin-react" package.json 2>/dev/null || [ $NEED_REACT -eq 1 ]; then
-  if ! check_package "eslint-plugin-react"; then
-    echo "   ❌ eslint-plugin-react 未安装"
-    REQUIRED_PACKAGES+=("eslint-plugin-react")
-  else
-    echo "   ✅ eslint-plugin-react 已安装"
-  fi
-fi
-
-if [ ${#REQUIRED_PACKAGES[@]} -eq 0 ]; then
-  echo "🎉 所有必需依赖都已安装！"
-else
-  echo "📦 安装缺少的依赖: ${REQUIRED_PACKAGES[*]}"
-  npm install --save-dev "${REQUIRED_PACKAGES[@]}"
-fi
-
+# 检查必要文件
 if [ ! -f "tsconfig.json" ]; then
-  echo "请创建 tsconfig.json..."
-  exit 1
+  echo "⚠️  请创建 tsconfig.json"
 fi
 
 if [ ! -f "eslint.config.mjs" ]; then
-  echo "请创建 eslint.config.mjs..."
-  exit 1
+  echo "⚠️  请创建 eslint.config.mjs"
 fi
 
-echo "📦 更新 package.json scripts..."
+# 更新 package.json scripts
 npm pkg set scripts.lint='eslint "**/*.ts" --ignore-pattern node_modules'
 npm pkg set scripts.lint:fix='eslint "**/*.ts" --ignore-pattern node_modules --fix'
 npm pkg set scripts.type-check="tsc --noEmit"
 
 echo ""
-echo "✅ 简化版 TypeScript Lint 脚本初始化完成！"
+echo "📊 安装结果:"
+echo "============"
+
+if [ ${#SUCCEEDED[@]} -gt 0 ]; then
+  echo "✅ 安装成功:"
+  for pkg in "${SUCCEEDED[@]}"; do
+    echo "   - $pkg"
+  done
+fi
+
+if [ ${#FAILED[@]} -gt 0 ]; then
+  echo "❌ 安装失败:"
+  for pkg in "${FAILED[@]}"; do
+    echo "   - $pkg"
+  done
+else
+  echo "🎉 所有依赖安装成功！"
+fi
+
 echo ""
-echo "📋 需要的脚本的内容:"
-echo "   - tsconfig.json (基本配置)"
-echo "   - eslint.config.js (基本配置)"
-echo "   - ts-lint.sh (检测脚本)"
-echo "   - package.json scripts (lint 相关命令)"
-echo ""
-echo "🚀 使用方法:"
-echo "   npm run lint                # 只运行 ESLint"
-echo "   npm run lint:fix            # 自动修复 ESLint 问题"
-echo "   npm run type-check          # 只运行类型检查"
-echo ""
-echo "💡 只安装了必要的依赖，无多余内容！"
+echo "🚀 可用命令:"
+echo "   npm run lint      # 运行 ESLint"
+echo "   npm run lint:fix  # 自动修复"
+echo "   npm run type-check # 类型检查"
