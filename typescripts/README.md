@@ -20,10 +20,3 @@ npm run lint          # ESLint 检查
 npm run lint:fix      # 自动修复
 npm run type-check    # 类型检查
 ```
-## 安装的依赖
-
-只安装4个必要依赖：
-- `typescript` - 编译器
-- `eslint` - 代码检查
-- `@typescript-eslint/parser` - TS 解析器
-- `@typescript-eslint/eslint-plugin` - TS 规则
