@@ -18,17 +18,16 @@
 ### 新建實例
 - 使用 `New` 開頭，格式為 `NewXxx()`
 - 既是 Builder 又實現了相關功能的可省略 Builder 結尾
-- **範例**: `NewUserService()`, `NewConfigBuilder()`
 
 ### 定義規範
 - 用 `Spec` 結尾，格式為 `NewXxxSpec()`
 - 必須是沒有任何能力，不產生任何副作用的情況
-- **範例**: `NewConfigSpec()`, `NewDatabaseSpec()`
+- **範例**: `ConfigSpec`, `NewConfigSpec()`
 
 ### 功能實例
-- 帶功能的實例推薦 `Provider` 結尾，格式為 `NewXxxProvider`
-- 如果是透過 `Spec` 產生 `Provider`，用 `Use` 作動詞
-- **範例**: `NewEventProvider()`, `NewUseConfigSpec().Use()`
+- 帶功能的實例推薦 `er` 結尾
+- 如果是透過 `Spec` 產生功能實例，用 `Use` 作動詞
+- **範例**: `MethodCaller`, `ConfigProvider`, `NewConfigSpec().Use().Get()`
 
 ## 📡 事件與消息規範
 
@@ -58,15 +57,15 @@ var GetUserEndpoint = api.NewEndpoint[GetUserRequest, UserData]()
 ```
 
 ### RPC 定義
-- 變數以 `Method` 結尾
+- 變數以 `MethodSpec` 結尾
 - 入參用 `Cmd` 後綴
 - 出參用 `Result` 後綴
 - 免後綴規則同上
 
 **範例**:
 ```go
-var GenerateTokenPairMethod = rpc.NewMethod[GenerateTokenCmd, TokenPair]("generate-token")
-var GetUserMethod = rpc.NewMethod[GetUserCmd, UserData]("get-user")
+var GenerateTokenPairMethodSpec = rpc.NewMethodSpec[GenerateTokenCmd, TokenPair]("generate-token")
+var GetUserMethodSpec = rpc.NewMethodSpec[GetUserCmd, UserData]("get-user")
 ```
 
 
