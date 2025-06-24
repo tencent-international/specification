@@ -25,7 +25,6 @@ if [ "$LANG" = "en" ]; then
 else
   gptcommit config set output.lang zh-cn
 fi
-gptcommit config set openai.prompt "请你生成一条符合 Conventional Commit 规范的 commit message，只输出纯文本，不要任何 markdown、标题、解释说明。"
 gptcommit config set openai.temperature 0.2
 gptcommit config set openai.retries 2
 gptcommit config set output.conventional_commit true
